@@ -821,6 +821,7 @@ module xSec_mod
         real, allocatable :: CTabs(:) ! total abs cross-section [um^2] for grain mixture
         real, allocatable :: CTsca(:) ! total sca cross-section [um^2] for grain mixture
         real, allocatable :: Ere(:), Eim(:)
+        real, allocatable :: componentMinRadius(:,:), componentMaxRadius(:,:) ! values for max and min size interval of grain size
 
         integer :: err ! allocation error status
         integer :: i, j, iwav, n, iSize, icomp ! counter
@@ -849,7 +850,9 @@ module xSec_mod
         nSpeciesMax = 0
 
        do icomp = 1, nDustComponents
-
+       
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          ! Read the number of dust species for the component
           close(13)
           open(file = dustSpeciesFile(icomp), action="read",unit=13, &
                &position="rewind",status="old", iostat = ios)
@@ -858,45 +861,43 @@ module xSec_mod
              stop
           end if
           read(13, *) nSpeciesPart(icomp)
-
-          close(13)
           nSpecies = nSpecies+nSpeciesPart(icomp)
+          close(13)
 
           if (nSpeciesMax < nSpeciesPart(icomp)) nSpeciesMax = nSpeciesPart(icomp)
 
-        end do
+       end do
 
         allocate(rho(1:nSpecies), stat = err)
-        if (err /= 0) then
-           print*, "! makeDustXsec: can't allocate rho memory"
-           stop
-        end if
         rho=0.
         allocate(grainVn(1:nSpecies), stat = err)
-        if (err /= 0) then
-           print*, "! makeDustXsec: can't allocate grainVn memory"
-           stop
-        end if
         grainVn=0.
         allocate(MsurfAtom(1:nSpecies), stat = err)
+        MsurfAtom=0
+        allocate(componentMinRadius(1:nDustComponents,1:nSpecies), stat = err)
+        componentMinRadius=0.
+        allocate(componentMaxRadius(1:nDustComponents,1:nSpecies), stat = err)
+        componentMaxRadius=0.
         if (err /= 0) then
-           print*, "! makeDustXsec: can't allocate surfAtom memory"
+           print*, "! makeDustXsec (876): can't allocate array memory"
            stop
         end if
-        MsurfAtom=0
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	! Read dust optical data for all species to be used
         do icomp = 1, nDustComponents
+        
+           ! Read the number of dust species for the component
            if (icomp > 1) dustComPoint(icomp) = dustComPoint(icomp-1)+nSpeciesPart(icomp-1)
-
-           close(13)
-           open(file = dustSpeciesFile(icomp), action="read",unit=13, &
-                & position="rewind",status="old", iostat = ios)
+              close(13)
+              open(file = dustSpeciesFile(icomp), action="read",unit=13, position="rewind",status="old", iostat = ios)
            if (ios /= 0 ) then
               print*, "! makeDustXsec: can't open file ", dustSpeciesFile(icomp)
               stop
            end if
            read(13, *) nSpeciesPart(icomp)
 
+           ! For each species in component, read dust optical datafile
            do i = 1, nSpeciesPart(icomp)
               read(13,*) extFile
               close(14)
@@ -905,47 +906,38 @@ module xSec_mod
                  print*, "! makeDustXsec: can't open file ", PREFIX,"/share/mocassin/"//extFile
                  stop
               end if
-              read(14,*) readChar
-
+              read(14,*) readChar 
               read(14,*) readChar, readReal, rho(dustComPoint(icomp)+i-1), grainVn(dustComPoint(icomp)+i-1), &
                    &MsurfAtom(dustComPoint(icomp)+i-1)
               close(14)
            end do
            close(13)
-           print*, 'Passou...',icomp, dustComPoint(icomp)
         end do
         
 
-        ! allocate abundances array for dust
+        ! allocate array for dust absorption opacities
         allocate (absOpacSpecies(1:nSpecies, 1:nbins), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for absOpacSpecies array"
-           stop
-        end if
         absOpacSpecies=0.
 
-        ! allocate abundances array for dust
+        ! allocate array for dust abundances
         allocate (grainAbun(1:nDustComponents, 1:nSpeciesMax), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for grainAbun array"
-           stop
-        end if
         grainAbun=0.
 
-
+        ! allocate array for dust species label
         allocate (grainLabel(1:nSpecies), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for grainLabel array"
-           stop
-        end if
         grainLabel=""
+        
+        ! allocate array for dust sublimation temperature
         allocate (TdustSublime(1:nSpecies), stat=err)
+        TdustSublime=0.
+        
         if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for TdustSublime array"
+           print*, "! makeDustXsec (925): error allocation memory for array"
            stop
         end if
-        TdustSublime=0.
 
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! Read file with dust grain size distribution
         close(11)
         open (unit=11, file=dustFile(2), iostat = ios, status = 'old', &
              &position = 'rewind', action="read")
@@ -954,36 +946,30 @@ module xSec_mod
            stop
         end if
 
-        ! chekc how many sizes are used
+        ! Read how many sizes are used and allocate array
         read (11, *) nSizes
         allocate (grainRadius(1:nSizes), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for grainRadius array"
-           stop
-        end if
         grainRadius=0.
+        
         allocate (da(1:nSizes), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for da array"
-           stop
-        end if
         da=0.
 
         allocate (grainWeight(1:nSizes), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for grainWeight array"
-           stop
-        end if
         grainWeight=0.
         normWeight =0.
 
+        if (err/=0) then
+           print*, "! makeDustXsec (952): error allocation memory for array"
+           stop
+        end if
 
+        ! Read sizes and weights for the distribution
         do ai = 1, nSizes
            read(11,*) iskip, grainRadius(ai), grainWeight(ai)
         end do
-
         close(11)
 
+        ! Calculate bin size
         if (nSizes>1) then
            da(1) = grainRadius(2)-grainRadius(1)
            do ai = 2, nSizes-1
@@ -991,15 +977,16 @@ module xSec_mod
            end do
            da(nSizes) = grainRadius(nSizes)-grainRadius(nSizes-1)
         end if
+        
+        ! Calculate normalization for distribution weights
         normWeight=  0.
         do ai = 1, nSizes
            normWeight = normWeight+grainWeight(ai)*da(ai)
-!!!           normWeight = normWeight+grainWeight(ai)
         end do
+        
         if (nSizes>1) then
            do ai = 1, nSizes
               grainWeight(ai) = (grainWeight(ai)*da(ai))/normWeight
-!!!              grainWeight(ai) = (grainWeight(ai))/normWeight
               if (.not.grainWeight(ai)>=0.) then
                  print*, '! makeDustXSec : Invalid grain weight ', grainWeight(ai), ai
                  stop
@@ -1011,7 +998,8 @@ module xSec_mod
            print*, '! makeDustXSec : Invalid nSizes', nSizes
            stop
         end if
-
+        
+        ! print final data read to screen 
         if (taskid == 0)  then
            print*, '! makeDustXSec : Size Distribution '
            print*, ' index, a [um], da [um], weight '
@@ -1021,20 +1009,19 @@ module xSec_mod
         end if
 
         allocate (dustScaXSecP(0:nSpecies,1:nSizes), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for dustScaXSecP array"
-           stop
-        end if
         dustScaXSecP = -1
         allocate (dustAbsXSecP(0:nSpecies,1:nSizes), stat=err)
-        if (err/=0) then
-           print*, "! makeDustXsec: error allocation memory for dustAbsXSecP array"
-           stop
-        end if
         dustAbsXSecP = -1
 
+        if (err/=0) then
+           print*, "! makeDustXsec (1011): error allocation memory for array"
+           stop
+        end if
 
-        do icomp = 1, nDustComponents   !  main dust component loop
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! Main loop to calculate crosssections for each dust component
+        
+        do icomp = 1, nDustComponents   
 
            open (unit=10, file=dustSpeciesFile(icomp), iostat = ios, status = &
                 &'old', position = 'rewind', action="read")
@@ -1043,12 +1030,13 @@ module xSec_mod
               stop
            end if
 
-           ! check how many species are used
+           ! Read how many species are used
            read (10, *) nSpeciesPart(icomp)
 
            do nSpec = 1, nSpeciesPart(icomp)
-
-              read(10, *) extinctionFile, grainAbun(icomp, nSpec)
+              
+              ! For each species read abundance and size interval to use
+              read(10, *) extinctionFile, grainAbun(icomp, nSpec), componentMinRadius(icomp, i), componentMaxRadius(icomp, i)
 
               open (unit=20, file=PREFIX//"/share/mocassin/"//extinctionFile, iostat = ios, &
                    &status = 'old', position = 'rewind', action="read")
