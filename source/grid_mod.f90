@@ -2963,6 +2963,7 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
        end if
 
     end function getVolume
+    
 
     subroutine resetGrid(grid)
       implicit none
@@ -3090,10 +3091,11 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
             stop
          end if
          viewPointPhi = 0.
-         read(77, *) (viewPointTheta(i), i = 1, nAngleBins)
-         read(77, *) (viewPointPhi(i), i = 1, nAngleBins)
+         read(77, *) (viewPointTheta(i), i = 0, nAngleBins)
+         read(77, *) (viewPointPhi(i), i = 0, nAngleBins)
       end if
       read(77, *) contCube(1),contCube(2)
+      print*, 'Continuum cube interval:', contCube(1),contCube(2)
       read(77, *) lgPhotoelectric
       read(77, *) lgTraceHeating
       read(77, *) Ldiffuse
@@ -3745,6 +3747,142 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
       return
     end function zee
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    subroutine guessGrid(grid)
+      implicit none
+
+      type(grid_type), intent(inout) :: grid(maxGrids)  ! the 3d grids
+
+      ! local variables
+
+      integer                        :: cellP ! cell pointer
+      integer                        :: err,ios   ! I/O error status
+      integer                        :: i,j,k ! counters
+      integer                        :: elem,&!
+&                                       ion,i1 ! counters
+      real                           :: p0,p00,p1,p2,p3,ind
+      real, allocatable                  :: p(:)
+      integer :: iG, ai  ! counters
+      integer :: totCells, totcellsloc
+      integer :: yTop, xPmap
+
+
+      integer, parameter :: maxLim = 10000
+      integer, parameter :: nSeries = 17
+
+      real                 :: radius
+
+      print*, 'gridGuess in'
+
+      allocate(p(nstages))
+      p=0.
+      !allocate(lgDataAvailable(3:nElements, nstages))
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !  Grid files to be read to be used as nitial guess
+      close(89)
+      open(unit=89, file='output/grid0.out',  action="read",position='rewind',  &
+           &          status='old', iostat = err)
+      if (err /= 0) then
+         print*, "! resetGrid: error opening file  output/grid0.out"
+         stop
+      end if
+
+      if (lgGas) then
+         close(78)
+         open(unit=78, file='output/grid1.out',  action="read",position='rewind',  &
+              &          status='old', iostat = err)
+         if (err /= 0) then
+            print*, "! resetGrid: error opening file  output/grid1.out"
+            stop
+         end if
+         ! open the grid2.out file for later
+         close(79)
+         open(unit=79, file='output/grid2.out', action="read", position='rewind',  &
+              &          status='old', iostat = err)
+         if (err /= 0) then
+            print*, "! resetGrid: error opening file  output/grid2.out"
+            stop
+         end if
+      end if
+      if (lgDust) then
+         close(88)
+         open(unit=88, file='output/dustGrid.out', action="read", position='rewind',  &
+              &          status='old', iostat = err)
+         if (err /= 0) then
+            print*, "! resetGrid: error opening file  output/dustGrid.out"
+            stop
+         end if
+      end if
+
+      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      !  
+      totCells = 0
+      totCellsloc = 0
+      
+      do iG = 1, nGrids
+         ! read the files into grid
+         do i = 1, grid(iG)%nx
+            do j = 1, yTOp
+               do k = 1, grid(iG)%nz
+
+                  if (lgGas) then
+
+                     i1=1
+                     if (lgMultiChemistry) then
+                        read(78, *) p1,p2,p3,i1
+                     else
+                        read(78, *) p1,p2,p3
+                     end if
+
+                     grid(iG)%Te(cellP)=p1
+                     grid(iG)%Ne(cellP)=p2
+                     !grid(iG)%Hden(cellP)=p3
+                     grid(iG)%abFileIndex(i,j,k)=i1
+
+                     do elem = 1, nElements
+                        if (lgElementOn(elem)) then
+                           read(79, *) (p(ion), ion =1,min(elem+1,nstages))
+                           grid(iG)%ionDen(cellP,elementXref(elem),:)=p
+                        end if
+                     end do
+                  end if !lgGas if
+
+!                  if (lgDust) then
+!                     if (lgMultiDustChemistry) then
+!                        read(88, *) p00, ind
+!                        grid(iG)%dustAbunIndex(cellP) = nint(ind)
+!                     else
+!                        read(88, *) p00
+!                     end if
+                     
+!                     do ai = 0, nSizes
+!                        read(88, *) (grid(iG)%Tdust(elem,ai,cellP), elem = 0,nSpeciesMax)
+!                        !print*,"passou..."
+!                     end do
+                   
+!                     grid(iG)%Ndust(cellP) = p00
+!                  end if
+
+               end do
+            end do
+         end do
+
+      end do ! closes nGrids loop
+
+      ! close files
+      close(89)
+
+      if (lgGas) then
+         close(78)
+         close(79)
+      end if
+
+!      if (lgDust) close(88)
+
+    end subroutine guessGrid
+    
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 end module grid_mod
 

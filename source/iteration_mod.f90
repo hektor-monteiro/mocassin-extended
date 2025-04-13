@@ -735,6 +735,7 @@ module iteration_mod
            if (taskid==0) print*, " total Escaped Packets :",  totalEscaped
 
            if (taskid==0) call writeSED(grid)
+           print*,'Valores de contCube: ',contCube(1),contCube(2)
            if (taskid==0 .and. contCube(1)>0. .and. contCube(2)>0. ) &
                 & call writeContCube(grid, contCube(1),contCube(2))
 

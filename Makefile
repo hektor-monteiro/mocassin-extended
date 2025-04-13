@@ -22,6 +22,7 @@ OS := $(shell uname)
 ifeq ($(OS),Darwin)
   PREFIX=/usr/local
 else
+  #PREFIX=$(HOME)/mocassin_2023
   PREFIX=/usr
 endif
 
@@ -33,7 +34,7 @@ VERSION := $(shell if [ -e debian/ ]; then dpkg-parsechangelog -S version; elif 
 ifeq ($(FC),ifort)
   FFLAGS += -cpp -DPREFIX=\"$(PREFIX)\" -DVERSION=\"$(VERSION)\" -module source/
 else
-  FFLAGS += -cpp -Jsource/ -ffree-line-length-0 -lm -DPREFIX=\"$(PREFIX)\" -DVERSION=\"$(VERSION)\" -I/usr/local/include -std=legacy
+  FFLAGS += -cpp -Jsource/ -ffree-line-length-0 -lm -DPREFIX=\"$(PREFIX)\" -DVERSION=\"$(VERSION)\" -I/usr/local/include -std=legacy 
 endif
 
 MANDIR=$(DESTDIR)$(PREFIX)/share/man/man1
@@ -50,7 +51,8 @@ else ifeq ($(CO),valgrind)
 else ifeq ($(CO),gprof)
   FFLAGS += -pg
 else
-  FFLAGS += -O2
+#  FFLAGS += -O3 -fbacktrace -Wall -fcheck=all -fopt-info -fopt-info-missed -march=native -mtune=native -fomit-frame-pointer -fopenmp
+  FFLAGS += -O2 -g
 endif
 
 .PHONY: all clean new install uninstall

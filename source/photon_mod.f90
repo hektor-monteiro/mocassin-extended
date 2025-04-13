@@ -1388,7 +1388,8 @@ module photon_mod
                 end if
 
                 if (grid(gP)%active(xP,yP,zP)>=0) exit
-             end do
+             
+             end do ! j safe limit loop
 
              ! cater for cells on cell wall
              if ( abs(dSx)<1.e-10 ) dSx = grid(gP)%xAxis(grid(gP)%nx)

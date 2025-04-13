@@ -132,8 +132,7 @@ module dust_mod
            grid%absOpac(grid%active(iP,jP,kP),i) = grid%Ndust(grid%active(iP,jP,kP))*&
                 & xSecArray(dustAbsXsecP(0,1)+i-1)
         end do
-
-
+        
       end subroutine dustOpacity
 
 

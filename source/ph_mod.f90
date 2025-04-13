@@ -912,8 +912,9 @@ module xSec_mod
               close(14)
            end do
            close(13)
+           print*, 'Passou...',icomp, dustComPoint(icomp)
         end do
-
+        
 
         ! allocate abundances array for dust
         allocate (absOpacSpecies(1:nSpecies, 1:nbins), stat=err)
@@ -1033,7 +1034,7 @@ module xSec_mod
         dustAbsXSecP = -1
 
 
-        do icomp = 1, nDustComponents
+        do icomp = 1, nDustComponents   !  main dust component loop
 
            open (unit=10, file=dustSpeciesFile(icomp), iostat = ios, status = &
                 &'old', position = 'rewind', action="read")
@@ -1059,6 +1060,7 @@ module xSec_mod
               read (20, *) dustFileType
 
               select case (dustFileType)
+              
               case ('nk')
 
                  read (unit=20, fmt=*, iostat=ios) textString
@@ -1108,7 +1110,7 @@ module xSec_mod
                  tmp3 = 0.
                  wav = 0.
 
-                 if (nSpec == 1) then
+                 if (nSpec == 1 .and. icomp == 1) then
 
                     ! allocate the pointers' memory
 
@@ -1137,12 +1139,14 @@ module xSec_mod
                        print*, "! makeDustXsec: error allocation memory for CTabs array"
                        stop
                     end if
+                 end if                 
+                 if (nSpec == 1) then
+                    CTabs = 0.
+                    CTsca = 0.
                     Gcos = 0.
                     Cabs = 0.
                     Csca = 0.
-                    CTabs = 0.
-                    CTsca = 0.
-                 end if
+                 endif
 
                  allocate (Ere(1:nWav), stat=err)
                  if (err/=0) then
@@ -1313,7 +1317,8 @@ module xSec_mod
                  wav = 0.
                  agrain = 0.
 
-                 if (nSpec == 1) then
+                 if (nSpec == 1  .and. icomp == 1) then
+                 
                     ! allocate the pointers' memory
                     allocate (gCos(1:nSpecies,0:nSizes,1:nbins), stat=err)
                     if (err/=0) then
@@ -1340,12 +1345,16 @@ module xSec_mod
                        print*, "! makeDustXsec: error allocation memory for CTabs array"
                        stop
                     end if
-                    gCos = 0.
-                    Cabs = 0.
-                    Csca = 0.
+                 end if
+                 
+                 if (nSpec == 1) then
                     CTabs = 0.
                     CTsca = 0.
-                 end if
+                    Gcos = 0.
+                    Cabs = 0.
+                    Csca = 0.
+                 endif
+                
 
                  do i = 1, nRadii
                     do j = 1, nWav
@@ -1406,7 +1415,7 @@ module xSec_mod
 
                     else
                        do j =1, nbins
-
+                       
                           Cabs(nSpec,i,j) = temp1nbins(iSize,j)+&
                                & (grainRadius(i)-agrain(iSize))*&
                                & (temp1nbins(iSize+1,j)-temp1nbins(iSize,j))/&
@@ -1425,6 +1434,7 @@ module xSec_mod
                     end if
 
                  end do
+                 
 
                  if (allocated(agrain)) deallocate(agrain)
                  if (allocated(temp1nbins)) deallocate(temp1nbins)
@@ -1435,9 +1445,10 @@ module xSec_mod
               case default
                  print*, "! makeDustXsec: invalid dustFileType", dustFileType,extinctionFile
                  stop
+                 
               end select
 
-           end do
+           end do  ! species loop
 
            close(10)
 
@@ -1453,39 +1464,42 @@ module xSec_mod
            ! calculate cross sections [um^2]
            ! combine individual species/sizes cross-sections into total
            ! cross-section for the grain mixture
+
            do i = 1, nbins
               do nSpec = 1, nSpeciesPart(icomp)
                  do ai = 1, nSizes
 
                     Csca(nSpec,ai,i) = Csca(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
                     Cabs(nSpec,ai,i) = Cabs(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
-
+                    
                     CTsca(i) = CTsca(i) + grainAbun(icomp, nSpec)*Csca(nSpec,ai,i)*grainWeight(ai)
                     CTabs(i) = CTabs(i) + grainAbun(icomp, nSpec)*Cabs(nSpec,ai,i)*grainWeight(ai)
 
                  end do
               end do
            end do
-
-
+           
+           
            do i = 1, nbins
               xSecArrayTemp(xSecTop+i) = CTsca(i)
               xSecArrayTemp(xSecTop+i+nbins) = CTabs(i)
 
               nn=2
-              do nSpec = 1, nSpeciesPart(icomp)
+              do n = 1, nSpeciesPart(icomp)
                  do ai = 1, nSizes
 
-                    xSecArrayTemp(xSecTop+i+nn*nbins) = Csca(nSpec, ai, i)
+                    xSecArrayTemp(xSecTop+i+nn*nbins) = Csca(n, ai, i)
                     nn=nn+1
 
-                    xSecArrayTemp(xSecTop+i+nn*nbins) = Cabs(nSpec, ai, i)
+                    xSecArrayTemp(xSecTop+i+nn*nbins) = Cabs(n, ai, i)
                     nn=nn+1
 
                  end do
               end do
 
            end do
+           
+           
 
            ! set up dust cross-section pointers
            ! individual species
@@ -1503,14 +1517,11 @@ module xSec_mod
                  nn=nn+1
               end do
            end do
+           
            ! update value of xSecTop
            xSecTop = xSecTop + 2*nbins*(nSpeciesPart(icomp)+1)*nSizes
-
-           if (allocated(Csca)) deallocate(Csca)
-           if (allocated(Cabs)) deallocate(Cabs)
-           if (allocated(CTsca)) deallocate(CTsca)
-           if (allocated(CTabs)) deallocate(CTabs)
-
+           
+           
            gSca = 0.
            norm = 0.
            do n = 1, nSpeciesPart(icomp)
@@ -1529,6 +1540,7 @@ module xSec_mod
 
                  end do
               end do
+              
            end do
 !           print*,' '
 !           print*,'Dust-grain anisotropy parameter g'
@@ -1536,10 +1548,17 @@ module xSec_mod
               gSca(i)=gSca(i)/norm(i)
 !              write(6,'(i5,2es12.4)')i,c/(nuArray(i)*fr1Ryd)*1.e4,gSca(i)
            enddo
-
-        end do
+           
+           
+           print*, icomp, absOpacSpecies(1,100), xSecArrayTemp(100), gSca(100), dustAbsXsecP(1,1), dustAbsXsecP(10,1), Cabs(1,1,100), CTabs(100)
+        end do  ! Loop of components
 
         if (allocated(gCos)) deallocate(gCos)
+        if (allocated(Csca)) deallocate(Csca)
+        if (allocated(Cabs)) deallocate(Cabs)
+        if (allocated(CTsca)) deallocate(CTsca)
+        if (allocated(CTabs)) deallocate(CTabs)
+
 
       end subroutine makeDustXsec
 

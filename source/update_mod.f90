@@ -784,7 +784,6 @@ module update_mod
 
                    Qa = XSecArray(dustAbsXsecP(ns,na)+ifreq-1)
 
-
                    EY = Yn*0.5* min(nuArray(ifreq)-grainVn(ns),&
                         & max(0., ((nuArray(ifreq)-grainVn(ns))**2-grainPot(ns,na)**2)/&
                         & (nuArray(ifreq)-grainVn(ns))))

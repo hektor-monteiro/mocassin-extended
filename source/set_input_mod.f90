@@ -269,7 +269,7 @@ module set_input_mod
                allocate(dustSpeciesFile(1:nDustComponents))
                allocate(nSpeciesPart(1:nDustComponents))
                read(unit=10, fmt=*, iostat=ios) keyword, nDustComponents, (dustSpeciesFile(j), j=1,nDustComponents), dustFile(2)
-               !print*, keyword, nDustComponents, (dustSpeciesFile(j), j=1,nDustComponents)
+               print*, keyword, nDustComponents, (dustSpeciesFile(j), j=1,nDustComponents)
                print*, dustFile(2)
             case ("planeIonization")
                backspace 10
