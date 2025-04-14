@@ -1278,7 +1278,7 @@ module xSec_mod
                  
                  do i = 1, nSizes
                  
-                    if (grainRadius(i) > componentMinRadius(icomp, nSpec) .and. grainRadius(i) < componentMaxRadius(icomp, nSpec)) then
+                    if (grainRadius(i) >= componentMinRadius(icomp, nSpec) .and. grainRadius(i) <= componentMaxRadius(icomp, nSpec)) then
 
 	               call locate(agrain, grainRadius(i), iSize)
 
@@ -1364,7 +1364,7 @@ module xSec_mod
               do nSpec = 1, nSpeciesPart(icomp)
                  do ai = 1, nSizes
                  
-                    if (grainRadius(i) > componentMinRadius(icomp, nSpec) .and. grainRadius(i) < componentMaxRadius(icomp, nSpec)) then
+                    if (grainRadius(ai) >= componentMinRadius(icomp, nSpec) .and. grainRadius(ai) <= componentMaxRadius(icomp, nSpec)) then
 
                        Csca(nSpec,ai,i) = Csca(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
                        Cabs(nSpec,ai,i) = Cabs(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
