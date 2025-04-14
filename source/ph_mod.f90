@@ -999,6 +999,7 @@ module xSec_mod
            stop
         end if
         
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! print final data read to screen 
         if (taskid == 0)  then
            print*, '! makeDustXSec : Size Distribution '
@@ -1162,10 +1163,8 @@ module xSec_mod
                  call linearMap(tmp2, wav, nwav, Eim, nuArray, nbins)
 
                  ! calculate efficiencies
-                 call getQs(Ere,Eim,Cabs(nSpec,1:nSizes,1:nbins),&
-                      & Csca(nSpec,1:nSizes,1:nbins), Gcos(nSpec,1:nSizes,1:nbins))
-!                 call getQs(Ere,Eim,Cabs(nSpec,1:nSizes,1:nbins),Csca(nSpec,1:nSizes,1:nbins))
-
+                 call getQs(Ere,Eim,Cabs(nSpec,1:nSizes,1:nbins),Csca(nSpec,1:nSizes,1:nbins), &
+                            & Gcos(nSpec,1:nSizes,1:nbins), componentMinRadius(icomp, nSpec), componentMaxRadius(icomp, nSpec))
 
                  if (allocated(wav)) deallocate(wav)
                  if (allocated(Ere)) deallocate(Ere)
@@ -1276,56 +1275,65 @@ module xSec_mod
                  if (allocated(tmpWav)) deallocate(tmpWav)
 
                  ! interpolate over the grain size distribution
-                 do i = 1, nSizes
-
-                    call locate(agrain, grainRadius(i), iSize)
-
-                    if (grainRadius(i)<agrain(1)) then
-                       print*, '! makeDustXsec: [warning] Size distribution &
-                            & extends to radii smaller than &
-                            & the smallest radius listed in the external Qfile provided'
-                       print*, 'Value of the smallest radius was assigned'
-                       Cabs(nSpec,i,:) =  temp1nbins(1,:)
-                       Csca(nSpec,i,:) =  temp2nbins(1,:)
-                       gCos(nSpec,i,:) =  temp3nbins(1,:)
-                    else if (grainRadius(i)>agrain(nRadii)) then
-                       print*, '! makeDustXsec: [warning] Size distribution &
-                            & extends to radii larger than &
-                            & the largest radius listed in the external Qfile provided'
-                       print*, 'Value of the largest radius was assigned'
-
-                       Cabs(nSpec,i,:) =  temp1nbins(nRadii,:)
-                       Csca(nSpec,i,:) =  temp2nbins(nRadii,:)
-                       gCos(nSpec,i,:) =  temp3nbins(nRadii,:)
-
-                    else
-                       do j =1, nbins
-                       
-                          Cabs(nSpec,i,j) = temp1nbins(iSize,j)+&
-                               & (grainRadius(i)-agrain(iSize))*&
-                               & (temp1nbins(iSize+1,j)-temp1nbins(iSize,j))/&
-                               & (agrain(iSize+1)-agrain(iSize))
-
-                          Csca(nSpec,i,j) = temp2nbins(iSize,j)+&
-                               & (grainRadius(i)-agrain(iSize))*&
-                               & (temp2nbins(iSize+1,j)-temp2nbins(iSize,j))/&
-                               & (agrain(iSize+1)-agrain(iSize))
-
-                          gCos(nSpec,i,j) = temp3nbins(iSize,j)+&
-                               & (grainRadius(i)-agrain(iSize))*&
-                               & (temp3nbins(iSize+1,j)-temp3nbins(iSize,j))/&
-                               & (agrain(iSize+1)-agrain(iSize))
-                       end do
-                    end if
-
-                 end do
                  
+                 do i = 1, nSizes
+                 
+                    if (grainRadius(i) > componentMinRadius(icomp, nSpec) .and. grainRadius(i) < componentMaxRadius(icomp, nSpec)) then
+
+	               call locate(agrain, grainRadius(i), iSize)
+
+	               if (grainRadius(i)<agrain(1)) then
+	                  print*, '! makeDustXsec: [warning] Size distribution &
+	                       & extends to radii smaller than &
+	                       & the smallest radius listed in the external Qfile provided'
+	                  print*, 'Value of the smallest radius was assigned'
+	                  Cabs(nSpec,i,:) =  temp1nbins(1,:)
+	                  Csca(nSpec,i,:) =  temp2nbins(1,:)
+	                  gCos(nSpec,i,:) =  temp3nbins(1,:)
+	               else if (grainRadius(i)>agrain(nRadii)) then
+	                  print*, '! makeDustXsec: [warning] Size distribution &
+	                       & extends to radii larger than &
+	                       & the largest radius listed in the external Qfile provided'
+	                  print*, 'Value of the largest radius was assigned'
+
+	                  Cabs(nSpec,i,:) =  temp1nbins(nRadii,:)
+	                  Csca(nSpec,i,:) =  temp2nbins(nRadii,:)
+	                  gCos(nSpec,i,:) =  temp3nbins(nRadii,:)
+
+	               else
+	                  do j =1, nbins
+	               
+	                     Cabs(nSpec,i,j) = temp1nbins(iSize,j)+&
+	                          & (grainRadius(i)-agrain(iSize))*&
+	                          & (temp1nbins(iSize+1,j)-temp1nbins(iSize,j))/&
+	                          & (agrain(iSize+1)-agrain(iSize))
+
+	                     Csca(nSpec,i,j) = temp2nbins(iSize,j)+&
+	                          & (grainRadius(i)-agrain(iSize))*&
+	                          & (temp2nbins(iSize+1,j)-temp2nbins(iSize,j))/&
+	                          & (agrain(iSize+1)-agrain(iSize))
+
+	                     gCos(nSpec,i,j) = temp3nbins(iSize,j)+&
+	                          & (grainRadius(i)-agrain(iSize))*&
+	                          & (temp3nbins(iSize+1,j)-temp3nbins(iSize,j))/&
+	                          & (agrain(iSize+1)-agrain(iSize))
+	                  end do
+	               end if
+	               
+	            else
+	               
+	               Cabs(nSpec,i,:) = 0.
+	               Csca(nSpec,i,:) = 0.
+	               gCos(nSpec,i,:) = 0.
+	               
+	            endif
+
+                 end do                 
 
                  if (allocated(agrain)) deallocate(agrain)
                  if (allocated(temp1nbins)) deallocate(temp1nbins)
                  if (allocated(temp2nbins)) deallocate(temp2nbins)
                  if (allocated(temp3nbins)) deallocate(temp3nbins)
-
 
               case default
                  print*, "! makeDustXsec: invalid dustFileType", dustFileType,extinctionFile
@@ -1355,17 +1363,28 @@ module xSec_mod
            do i = 1, nbins
               do nSpec = 1, nSpeciesPart(icomp)
                  do ai = 1, nSizes
+                 
+                    if (grainRadius(i) > componentMinRadius(icomp, nSpec) .and. grainRadius(i) < componentMaxRadius(icomp, nSpec)) then
 
-                    Csca(nSpec,ai,i) = Csca(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
-                    Cabs(nSpec,ai,i) = Cabs(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
+                       Csca(nSpec,ai,i) = Csca(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
+                       Cabs(nSpec,ai,i) = Cabs(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
+                                           
+                    else
+                       
+                       Csca(nSpec,ai,i) = 0.
+                       Cabs(nSpec,ai,i) = 0.
+                       
+                    endif
                     
                     CTsca(i) = CTsca(i) + grainAbun(icomp, nSpec)*Csca(nSpec,ai,i)*grainWeight(ai)
                     CTabs(i) = CTabs(i) + grainAbun(icomp, nSpec)*Cabs(nSpec,ai,i)*grainWeight(ai)
-
+                       
                  end do
               end do
            end do
            
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           ! set temp arrays for the cross sections
            
            do i = 1, nbins
               xSecArrayTemp(xSecTop+i) = CTsca(i)
@@ -1407,6 +1426,8 @@ module xSec_mod
            ! update value of xSecTop
            xSecTop = xSecTop + 2*nbins*(nSpeciesPart(icomp)+1)*nSizes
            
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           ! set absorption opacities array
            
            gSca = 0.
            norm = 0.
@@ -1424,8 +1445,7 @@ module xSec_mod
                          & grainWeight(ai)*grainAbun(icomp, n)
 
                  end do
-              end do
-              
+              end do              
            end do
 
            do i = 1, nbins
@@ -1448,10 +1468,10 @@ module xSec_mod
 
 
 
-      subroutine getQs(Ere_in,Eim_in,Qabs,Qsca,ggCos)
+      subroutine getQs(Ere_in,Eim_in,Qabs,Qsca,ggCos,amin,amax)
         implicit none
 
-        real, intent(in) :: Ere_in(*), Eim_in(*)
+        real, intent(in) :: Ere_in(*), Eim_in(*),amin,amax
         real, intent(out) :: Qabs(nsizes,nbins), Qsca(nSizes, nbins),&
              &ggCos(nSizes,nbins)
 
@@ -1466,21 +1486,29 @@ module xSec_mod
            refIndex = cmplx(Ere_in(i),Eim_in(i))
 
            do ai = 1, nSizes
+              
+              if (grainRadius(ai) > amin .and. grainRadius(ai) < amax) then 
+                 
+                 ! size parameter
+                 sizeParam=2.0*3.14159265*grainRadius(ai)/( 2.9979250e14/(nuArray(i)*fr1Ryd) )
 
-              ! size parameter
-              sizeParam=2.0*3.14159265*grainRadius(ai)/&
-                   &( 2.9979250e14/(nuArray(i)*fr1Ryd) )
+                 ! if size parameter > 100 use 100 (geometrical optics)
+                 if (sizeParam > 100.) sizeParam=100.
 
-              ! if size parameter > 100 use 100 (geometrical optics)
-              if (sizeParam > 100.) sizeParam=100.
+                 ! now calculate the efficiencies
+                 call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
 
-              ! now calculate the efficiencies
-              call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),&
-                   & ggCos(ai,i))
+                 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
 
-              Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
-
-              if (.not.lgDustScattering) Qsca(ai,i)=0.
+                 if (.not.lgDustScattering) Qsca(ai,i)=0.
+                 
+              else ! if grain size is outside the range for the given species set all to 0
+              
+                 Qabs(ai,i) = 0.
+                 Qsca(ai,i) = 0.
+                 ggCos(ai,i) = 0.
+                 
+              endif         
 
            end do
 
