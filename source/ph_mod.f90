@@ -821,7 +821,6 @@ module xSec_mod
         real, allocatable :: CTabs(:) ! total abs cross-section [um^2] for grain mixture
         real, allocatable :: CTsca(:) ! total sca cross-section [um^2] for grain mixture
         real, allocatable :: Ere(:), Eim(:)
-        real, allocatable :: componentMinRadius(:,:), componentMaxRadius(:,:) ! values for max and min size interval of grain size
 
         integer :: err ! allocation error status
         integer :: i, j, iwav, n, iSize, icomp ! counter
@@ -1369,16 +1368,11 @@ module xSec_mod
                        Csca(nSpec,ai,i) = Csca(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
                        Cabs(nSpec,ai,i) = Cabs(nSpec,ai,i)*Pi*grainRadius(ai)*grainRadius(ai)*1.e-8
                                            
-                    else
-                       
-                       Csca(nSpec,ai,i) = 0.
-                       Cabs(nSpec,ai,i) = 0.
-                       
+                       CTsca(i) = CTsca(i) + grainAbun(icomp, nSpec)*Csca(nSpec,ai,i)*grainWeight(ai)
+                       CTabs(i) = CTabs(i) + grainAbun(icomp, nSpec)*Cabs(nSpec,ai,i)*grainWeight(ai)
+                                             
                     endif
-                    
-                    CTsca(i) = CTsca(i) + grainAbun(icomp, nSpec)*Csca(nSpec,ai,i)*grainWeight(ai)
-                    CTabs(i) = CTabs(i) + grainAbun(icomp, nSpec)*Cabs(nSpec,ai,i)*grainWeight(ai)
-                       
+                                           
                  end do
               end do
            end do
@@ -1431,19 +1425,24 @@ module xSec_mod
            
            gSca = 0.
            norm = 0.
-           do n = 1, nSpeciesPart(icomp)
+           do nSpec = 1, nSpeciesPart(icomp)
               do i = 1, nbins
                  do ai = 1, nSizes
-                    absOpacSpecies(dustComPoint(icomp)-1+n, i) = &
-                         & absOpacSpecies(dustComPoint(icomp)-1+n, i) &
-                         & + xSecArrayTemp(dustAbsXsecP(dustComPoint(icomp)-1+n,ai)+i-1)*&
-                         & grainWeight(ai)
+                 
+                    if (grainRadius(ai) >= componentMinRadius(icomp, nSpec) .and. grainRadius(ai) <= componentMaxRadius(icomp, nSpec)) then
+                    
+                       absOpacSpecies(dustComPoint(icomp)-1+nSpec, i) = &
+                            & absOpacSpecies(dustComPoint(icomp)-1+nSpec, i) &
+                            & + xSecArrayTemp(dustAbsXsecP(dustComPoint(icomp)-1+nSpec,ai)+i-1)*&
+                            & grainWeight(ai)
 
-                    gSca(i) = gSca(i)+gCos(n,ai,i)*Pi*grainRadius(ai)**2*&
-                         & grainWeight(ai)*grainAbun(icomp, n)
-                    norm(i) = norm(i) + Pi*grainRadius(ai)**2*&
-                         & grainWeight(ai)*grainAbun(icomp, n)
-
+                       gSca(i) = gSca(i)+gCos(nSpec,ai,i)*Pi*grainRadius(ai)**2*&
+                            & grainWeight(ai)*grainAbun(icomp, nSpec)
+                       norm(i) = norm(i) + Pi*grainRadius(ai)**2*&
+                            & grainWeight(ai)*grainAbun(icomp, nSpec)
+                            
+                    endif
+                    
                  end do
               end do              
            end do

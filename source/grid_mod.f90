@@ -687,11 +687,13 @@ module grid_mod
                              dV = getVolume(grid(iG),ix,iy,iz)
                              do ai = 1, nsizes
                                 do nspec = 1, nspeciesPart(nsp)
-                                   totalDustMass = totalDustMass + &
-                           & (1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
-                           & rho(dustComPoint(nsp)-1+nspec)*&
-                           & grainWeight(ai)*grainAbun(nsp,nspec)&
-                           & *grid(iG)%Ndust(grid(iG)%active(ix,iy,iz))*dV)
+                                   if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
+                                      totalDustMass = totalDustMass + &
+                                         & (1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
+                                         & rho(dustComPoint(nsp)-1+nspec)*&
+                                         & grainWeight(ai)*grainAbun(nsp,nspec)&
+                                         & *grid(iG)%Ndust(grid(iG)%active(ix,iy,iz))*dV)
+                                   endif
                                 end do
                              end do
                           endif
@@ -1687,10 +1689,12 @@ module grid_mod
 !print*, nsp, 'here!'
                           do nspec = 1, nSpeciesPart(nsp)
                              do ai = 1, nSizes
-                                denominator = denominator + &
-                                     & (1.3333*Pi*( (grainRadius(ai)*1.e-4)**3)*&
-                                     & rho(dustComPoint(nsp)+nspec-1)*grainWeight(ai)*&
-                                     & grainAbun(nsp, nspec))
+                                if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
+                                   denominator = denominator + &
+                                        & (1.3333*Pi*( (grainRadius(ai)*1.e-4)**3)*&
+                                        & rho(dustComPoint(nsp)+nspec-1)*grainWeight(ai)*&
+                                        & grainAbun(nsp, nspec))
+                                endif
                              end do
                           end do
                           grid%Ndust(grid%active(i,j,k)) = grid%Ndust(grid%active(i,j,k))/&
@@ -1707,11 +1711,12 @@ module grid_mod
 
                           do ai = 1, nsizes
                              do nspec = 1, nspeciesPart(nsp)
-                                totalDustMass = totalDustMass + &
-                                     &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
-                                     & rho(dustComPoint(nsp)-1+nspec)*grainWeight(ai)*&
-                                     & grainAbun(nsp,nspec))*grid%Ndust(grid%active(i,j,k))*dV
-
+                                if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
+                                   totalDustMass = totalDustMass + &
+                                        &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
+                                        & rho(dustComPoint(nsp)-1+nspec)*grainWeight(ai)*&
+                                        & grainAbun(nsp,nspec))*grid%Ndust(grid%active(i,j,k))*dV
+                                endif
                              end do
                           end do
 
@@ -2543,10 +2548,12 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
 
                              do nspec = 1, nSpeciesPart(nsp)
                                 do ai = 1, nSizes
-                                   denominator = denominator + &
-                                        & (1.3333*Pi*( (grainRadius(ai)*1.e-4)**3)*&
-                                        & rho(dustComPoint(nsp)-1+nspec)&
-                                        &*grainWeight(ai)*grainAbun(nsp,nspec))
+                                   if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
+                                      denominator = denominator + &
+                                           & (1.3333*Pi*( (grainRadius(ai)*1.e-4)**3)*&
+                                           & rho(dustComPoint(nsp)-1+nspec)&
+                                           &*grainWeight(ai)*grainAbun(nsp,nspec))
+                                   endif
                                 end do
                              end do
                              grid(iG)%Ndust(grid(iG)%active(ix,iy,iz)) = grid(iG)%Ndust(grid(iG)%active(ix,iy,iz))/&
@@ -2565,11 +2572,13 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
 
                              do ai = 1, nsizes
                                 do nspec = 1, nspeciesPart(nsp)
-                                   totalDustMass = totalDustMass + &
-                                        &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
-                                        & rho(dustComPoint(nsp)-1+nspec)*&
-                                        & grainWeight(ai)*grainAbun(nsp,nspec)&
-                                        & *grid(iG)%Ndust(grid(iG)%active(ix,iy,iz))*dV)
+                                   if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
+                                      totalDustMass = totalDustMass + &
+                                           &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
+                                           & rho(dustComPoint(nsp)-1+nspec)*&
+                                           & grainWeight(ai)*grainAbun(nsp,nspec)&
+                                           & *grid(iG)%Ndust(grid(iG)%active(ix,iy,iz))*dV)
+                                   endif
                                 end do
                              end do
 

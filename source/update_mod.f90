@@ -367,20 +367,24 @@ module update_mod
             if (lgDust .and. lgGas .and. lgPhotoelectric) then
                do isp = 1, nSpeciesPart(nspU)
                   do ai = 1, nsizes
-                     nIterateGC     = 0
-                     grainEmi       = 0.
-                     grainRec       = 0.
+                  
+                     if (grainRadius(ai) >= componentMinRadius(nspU, isp) .and. grainRadius(ai) <= componentMaxRadius(nspU, isp)) then
+                     
+                        nIterateGC     = 0
+                        grainEmi       = 0.
+                        grainRec       = 0.                     
 
-                     ispbig = isp+dustComPoint(nspU)-1
-                     call setGrainPotential(ispbig,ai,lgGCBConv)
-
-                     call locate(nuArray, grainPot(isp,ai), grainPotP(isp,ai))
-                     if (grainPotP(isp,ai) == 0) grainPotP = 1
+                        ispbig = isp+dustComPoint(nspU)-1
+                        call setGrainPotential(ispbig,ai,lgGCBConv)
+                        call locate(nuArray, grainPot(isp,ai), grainPotP(isp,ai))
+                        if (grainPotP(isp,ai) == 0) grainPotP = 1
+                        
+                     endif
 
                   end do
                end do
+               
                call setPhotoelHeatCool()
-
 
                call setDustGasCollHeatCool()
 
@@ -748,53 +752,44 @@ module update_mod
           photoelHeat_g=0.
           do ns = 1, nSpeciesPart(nspU)
              do na = 1, nSizes
+             
+                if (grainRadius(na) >= componentMinRadius(nspU, ns) .and. grainRadius(na) <= componentMaxRadius(nspU, ns)) then
 
-
-                if (grainPotP(ns,na) <= 0) then
-                   print*, "! setPhotoelHeatCool irregular grain potential index", &
-                        grainPotP(ns,na), grainPot(ns,na)
-                   stop
-                end if
-
-                th = max(grainVn(ns)+grainPot(ns,na), grainVn(ns))
-                call locate(nuArray,th,thP)
-                if(thP<=0) thP=1
-
-                do ifreq = thP, nbins
-
-!                do ifreq = grainPotP(ns,na), nbins
-
-                   Yn = min(Y0*(1.-grainVn(ns)/nuArray(ifreq)), Y1)
-
-
-                   Yhat = Yn*min(1., max(0.,1.-grainPot(ns,na)/(nuArray(ifreq)-grainVn(ns))))
-
-                   if (.not. lgDebug) then
-!                      photFlux = (grid%JPEots(cellP,ifreq) + &
-!                           & grid%Jste(cellP,ifreq))/(hcRyd*nuArray(ifreq))
-                      photFlux = grid%Jste(cellP,ifreq)/(hcRyd*nuArray(ifreq))
-                   else
-!                      photFlux = (grid%JPEots(cellP,ifreq) + grid%Jste(cellP,ifreq)+&
-!                           & grid%Jdif(cellP,ifreq))/(hcRyd*nuArray(ifreq))
-                      photFlux = (grid%Jste(cellP,ifreq)+grid%Jdif(cellP,ifreq))/(hcRyd*nuArray(ifreq))
-
+                   if (grainPotP(ns,na) <= 0) then
+                      print*, "! setPhotoelHeatCool irregular grain potential index", &
+                           grainPotP(ns,na), grainPot(ns,na)
+                      stop
                    end if
 
-                   photFlux = photFLux
+                   th = max(grainVn(ns)+grainPot(ns,na), grainVn(ns))
+                   call locate(nuArray,th,thP)
+                   if(thP<=0) thP=1
 
-                   Qa = XSecArray(dustAbsXsecP(ns,na)+ifreq-1)
+                   do ifreq = thP, nbins
 
-                   EY = Yn*0.5* min(nuArray(ifreq)-grainVn(ns),&
-                        & max(0., ((nuArray(ifreq)-grainVn(ns))**2-grainPot(ns,na)**2)/&
-                        & (nuArray(ifreq)-grainVn(ns))))
+                      Yn = min(Y0*(1.-grainVn(ns)/nuArray(ifreq)), Y1)
+                      Yhat = Yn*min(1., max(0.,1.-grainPot(ns,na)/(nuArray(ifreq)-grainVn(ns))))
 
-!                   photoelHeat_d(ns,na) = photoelHeat_d(ns,na)+Qa*photFlux*EY*hcRyd/Pi
-                   photoelHeat_d(ns,na) = photoelHeat_d(ns,na)+Qa*photFlux*EY*hcRyd/Pi
+                      if (.not. lgDebug) then
+                         photFlux = grid%Jste(cellP,ifreq)/(hcRyd*nuArray(ifreq))
+                      else
+                         photFlux = (grid%Jste(cellP,ifreq)+grid%Jdif(cellP,ifreq))/(hcRyd*nuArray(ifreq))
+                      end if
 
-                   photoelHeat_g = photoelHeat_g+Qa*photFlux*(EY-Yhat*grainPot(ns,na))*&
-                        & grainAbun(nspU,ns)*grainWeight(na)
+                      photFlux = photFLux
+                      Qa = XSecArray(dustAbsXsecP(ns,na)+ifreq-1)
+                      EY = Yn*0.5* min(nuArray(ifreq)-grainVn(ns),&
+                           & max(0., ((nuArray(ifreq)-grainVn(ns))**2-grainPot(ns,na)**2)/&
+                           & (nuArray(ifreq)-grainVn(ns))))
 
-                end do
+                      photoelHeat_d(ns,na) = photoelHeat_d(ns,na)+Qa*photFlux*EY*hcRyd/Pi
+                      photoelHeat_g = photoelHeat_g+Qa*photFlux*(EY-Yhat*grainPot(ns,na))*&
+                           & grainAbun(nspU,ns)*grainWeight(na)
+
+                   end do
+                   
+                endif
+                   
              end do
           end do
 
@@ -856,34 +851,41 @@ module update_mod
                          else
                             S = 1.
                          end if
+                         
                          do na = 1, nSizes
+                         
+                            if (grainRadius(na) >= componentMinRadius(nspU, ns) .and. grainRadius(na) <= componentMaxRadius(nspU, ns)) then
 
-                            psi = Z*grainPot(ns,na)/kT
-                            if (psi <= 0. ) then
-                               eta = 1.-psi
-                               xi = 1. - psi/2.
-                            else
-                               eta = exp(-psi)
-                               xi = (1.+psi/2.) * eta
-                            end if
+                               psi = Z*grainPot(ns,na)/kT
+                               if (psi <= 0. ) then
+                                  eta = 1.-psi
+                                  xi = 1. - psi/2.
+                               else
+                                  eta = exp(-psi)
+                                  xi = (1.+psi/2.) * eta
+                               end if
 
-                            gasDustColl_d(ns,na) = gasDustColl_d(ns,na)+&
-                                 & ionDenUsed(elementXref(elem),istage)*&
-                                 & grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
-                                 & grid%Hden(cellP)*&
-                                 & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
-                                 & S*vmean*(2.*kT*Ryd2erg*xi-eta*&
-                                 & (Z*grainPot(ns,na)*Ryd2erg-IPerg+&
-                                 & 2.*kBoltzmann*grid%Tdust(ns,na,cellP)))
+                               gasDustColl_d(ns,na) = gasDustColl_d(ns,na)+&
+                                    & ionDenUsed(elementXref(elem),istage)*&
+                                    & grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
+                                    & grid%Hden(cellP)*&
+                                    & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
+                                    & S*vmean*(2.*kT*Ryd2erg*xi-eta*&
+                                    & (Z*grainPot(ns,na)*Ryd2erg-IPerg+&
+                                    & 2.*kBoltzmann*grid%Tdust(ns,na,cellP)))
 
-                            gasDustColl_g = gasDustColl_g + &
-                                 & ionDenUsed(elementXref(elem),istage)*&
-                                 & grainWeight(na)*grainAbun(nspU,ns)*grid%Ndust(cellP)*&
-                                 & grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
-                                 & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
-                                 & S*vmean*(2.*kT*Ryd2erg*xi-eta*2.*kBoltzmann*&
-                                 & grid%Tdust(ns,na,cellP))
+                               gasDustColl_g = gasDustColl_g + &
+                                    & ionDenUsed(elementXref(elem),istage)*&
+                                    & grainWeight(na)*grainAbun(nspU,ns)*grid%Ndust(cellP)*&
+                                    & grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
+                                    & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
+                                    & S*vmean*(2.*kT*Ryd2erg*xi-eta*2.*kBoltzmann*&
+                                    & grid%Tdust(ns,na,cellP))
+                                    
+                            endif
+                            
                          end do
+                         
                       end do
                    end do
                 end if
@@ -895,29 +897,33 @@ module update_mod
                 S = 1.
                 Z=-1.
                 do na = 1, nSizes
+                
+                   if (grainRadius(na) >= componentMinRadius(nspU, ns) .and. grainRadius(na) <= componentMaxRadius(nspU, ns)) then
 
+                      psi = Z*grainPot(ns,na)/kT
+                      if (psi <= 0. ) then
+                         eta = 1.-psi
+                         xi = 1. - psi/2.
+                      else
+                         eta = exp(-psi)
+                         xi = (1.+psi/2.) * eta
+                      end if
 
-                   psi = Z*grainPot(ns,na)/kT
-                   if (psi <= 0. ) then
-                      eta = 1.-psi
-                      xi = 1. - psi/2.
-                   else
-                      eta = exp(-psi)
-                      xi = (1.+psi/2.) * eta
-                   end if
+                      gasDustColl_d(ns,na) = gasDustColl_d(ns,na)+&
+                           & NeUsed* &
+                           & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
+                           & S*vmean*(2.*kT*Ryd2erg*xi-eta*&
+                           & (Z*grainPot(ns,na)*ryd2erg))
 
-                   gasDustColl_d(ns,na) = gasDustColl_d(ns,na)+&
-                        & NeUsed* &
-                        & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
-                        & S*vmean*(2.*kT*Ryd2erg*xi-eta*&
-                        & (Z*grainPot(ns,na)*ryd2erg))
-
-                   gasDustColl_g = gasDustColl_g + &
-                        & NeUsed* &
-                        & grainWeight(na)*grainAbun(nspU, ns)*grid%Ndust(cellP)*&
-                        & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
-                        & S*vmean*(2.*kT*Ryd2erg*xi)/&
-                        & grid%Hden(cellP)
+                      gasDustColl_g = gasDustColl_g + &
+                           & NeUsed* &
+                           & grainWeight(na)*grainAbun(nspU, ns)*grid%Ndust(cellP)*&
+                           & Pi*grainRadius(na)*grainRadius(na)*1.e-8*&
+                           & S*vmean*(2.*kT*Ryd2erg*xi)/&
+                           & grid%Hden(cellP)
+                      
+                   endif
+                   
                 end do
              end do
 
@@ -1862,76 +1868,81 @@ module update_mod
 
                do ai = 1, nSizes
 
-                  dustAbsIntegral=0.
-                  if (lgTraceHeating.and.taskid==0) dabs=0.
+                  if (grainRadius(ai) >= componentMinRadius(nspU, ns) .and. grainRadius(ai) <= componentMaxRadius(nspU, ns)) then
+                  
+                     dustAbsIntegral=0.
+                                    
+                     if (lgTraceHeating.and.taskid==0) dabs=0.
 
-                  do i = 1, nbins
-                     dustAbsIntegral = dustAbsIntegral+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
-                     if (lgTraceHeating.and.taskid==0) then
-                        dabs = dabs+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
+                     do i = 1, nbins
+                        dustAbsIntegral = dustAbsIntegral+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
+                        if (lgTraceHeating.and.taskid==0) then
+                           dabs = dabs+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
+                        end if
+                     end do
+
+                     if (lgGas .and. convPercent>=resLinesTransfer .and. (.not.lgResLinesFirst) .and. &
+                          & (.not.nIterateMC==1) ) then
+                        dustHeatingBudget(grid%abFileIndex(xp,yp,zp),0) = dustHeatingBudget(grid%abFileIndex(xp,yp,zp),0)+&
+                             & dustAbsIntegral*grainWeight(ai)*grainAbun(nspU,nS)*grid%Ndust(cellP)
+                        dustHeatingBudget(0,0) = dustHeatingBudget(0,0)+&
+                             & dustAbsIntegral*grainWeight(ai)*grainAbun(nspU,nS)*grid%Ndust(cellP)
+                        resLineHeat = resLineHeating(ai,ns,nspU)
+                        dustAbsIntegral = dustAbsIntegral+resLineHeat
                      end if
-                  end do
 
-                  if (lgGas .and. convPercent>=resLinesTransfer .and. (.not.lgResLinesFirst) .and. &
-                       & (.not.nIterateMC==1) ) then
-                     dustHeatingBudget(grid%abFileIndex(xp,yp,zp),0) = dustHeatingBudget(grid%abFileIndex(xp,yp,zp),0)+&
-                          & dustAbsIntegral*grainWeight(ai)*grainAbun(nspU,nS)*grid%Ndust(cellP)
-                     dustHeatingBudget(0,0) = dustHeatingBudget(0,0)+&
-                          & dustAbsIntegral*grainWeight(ai)*grainAbun(nspU,nS)*grid%Ndust(cellP)
-                     resLineHeat = resLineHeating(ai,ns,nspU)
-                     dustAbsIntegral = dustAbsIntegral+resLineHeat
-                  end if
-
-                  if (lgGas .and. lgPhotoelectric) then
-                     dustAbsIntegral = dustAbsIntegral+gasDustColl_d(nS,ai)-&
-                          & photoelHeat_d(nS,ai)
-                  end if
-
-                  if (lgTraceHeating.and.taskid==0) then
-                     write(57,*) 'Dust Species: ', ns, ai
-                     write(57,*) 'Abs of cont rad field  ', dabs
-                     write(57,*) 'Res Lines Heating: ', reslineheat
                      if (lgGas .and. lgPhotoelectric) then
-
-                        write(57,*) 'Grain potential ', grainPot(ns,ai)
-                        write(57,*) 'Gas-dust collision heat', gasDustColl_d(nS,ai)
-                        write(57,*) 'Photoelctric cooling: ', photoelHeat_d(nS,ai)
+                        dustAbsIntegral = dustAbsIntegral+gasDustColl_d(nS,ai)-&
+                             & photoelHeat_d(nS,ai)
                      end if
-                  end if
 
-                  call locate(dustEmIntegral(nS,ai,:), dustAbsIntegral, iT)
+                     if (lgTraceHeating.and.taskid==0) then
+                        write(57,*) 'Dust Species: ', ns, ai
+                        write(57,*) 'Abs of cont rad field  ', dabs
+                        write(57,*) 'Res Lines Heating: ', reslineheat
+                        if (lgGas .and. lgPhotoelectric) then
 
-                  if (iT<=0 .and. lgTalk) then
-                     print*, "getDustT: [warning] temperature of grain = 0. K!!!!"
-                     print*, cellP
-                     print*, nS, dustAbsIntegral
-                     print*, dustEmIntegral(nS,ai,1)
-                     !stop
-                     iT=1
-                     grid%Tdust(nS,ai,cellP) = 1.
-                  else if (iT>=nTemps) then
-                     grid%Tdust(nS,ai,cellP) = real(nTemps)
-                  else
-                     grid%Tdust(nS,ai,cellP) = real(iT) + &
-                          & (dustAbsIntegral-dustEmIntegral(nS,ai,iT))*&
-                          & (real(iT+1)-real(iT))/(dustEmIntegral(nS,ai,iT+1)-&
-                          & dustEmIntegral(nS,ai,iT))
-                  end if
+                           write(57,*) 'Grain potential ', grainPot(ns,ai)
+                           write(57,*) 'Gas-dust collision heat', gasDustColl_d(nS,ai)
+                           write(57,*) 'Photoelctric cooling: ', photoelHeat_d(nS,ai)
+                        end if
+                     end if
 
-                  if (lgTraceHeating.and.taskid==0) then
-                     write(57,*) 'Radiative cooling: ', dustEmIntegral(ns,ai,iT)
-                     write(57,*) 'Grain temperature: ', grid%Tdust(nS,ai,cellP), &
-                          & " species ", grainLabel(nS), " size:", grainRadius(ai)
+                     call locate(dustEmIntegral(nS,ai,:), dustAbsIntegral, iT)
 
-                  end if
+                     if (iT<=0 .and. lgTalk) then
+                        print*, "getDustT: [warning] temperature of grain = 0. K!!!!"
+                        print*, cellP
+                        print*, nS, dustAbsIntegral
+                        print*, dustEmIntegral(nS,ai,1)
+                        !stop
+                        iT=1
+                        grid%Tdust(nS,ai,cellP) = 1.
+                     else if (iT>=nTemps) then
+                        grid%Tdust(nS,ai,cellP) = real(nTemps)
+                     else
+                        grid%Tdust(nS,ai,cellP) = real(iT) + &
+                             & (dustAbsIntegral-dustEmIntegral(nS,ai,iT))*&
+                             & (real(iT+1)-real(iT))/(dustEmIntegral(nS,ai,iT+1)-&
+                             & dustEmIntegral(nS,ai,iT))
+                     end if
 
-                  if (lgTalk) &
-                       & print*, "! getDustT: [talk] cell ", xP,yP,zP,"; Grain temperature: "&
-                       &, grid%Tdust(nS,ai,cellP), " species ", grainLabel(nS), " size:", grainRadius(ai)
+                     if (lgTraceHeating.and.taskid==0) then
+                        write(57,*) 'Radiative cooling: ', dustEmIntegral(ns,ai,iT)
+                        write(57,*) 'Grain temperature: ', grid%Tdust(nS,ai,cellP), &
+                             & " species ", grainLabel(nS), " size:", grainRadius(ai)
 
-                  ! find weighted mean
-                  grid%Tdust(nS,0,cellP) = grid%Tdust(nS,0,cellP)+&
-                       & grid%Tdust(nS,ai,cellP)*grainWeight(ai)
+                     end if
+
+                     if (lgTalk) &
+                          & print*, "! getDustT: [talk] cell ", xP,yP,zP,"; Grain temperature: "&
+                          &, grid%Tdust(nS,ai,cellP), " species ", grainLabel(nS), " size:", grainRadius(ai)
+
+                     ! find weighted mean
+                     grid%Tdust(nS,0,cellP) = grid%Tdust(nS,0,cellP)+&
+                          & grid%Tdust(nS,ai,cellP)*grainWeight(ai)
+                          
+                  endif
 
                end do
 
