@@ -1656,9 +1656,10 @@ module grid_mod
                           grid%echoVol(i,j,k)=vEcho(grid,i,j,k,echot1,echot2,vol)
                           echoVolume = echoVolume + vol
                        endif
-
+                       
+                       
                        if (lgDust .and. (lgMdMg.or.lgMdMh) ) then
-
+                          print*, 'Passou...', lgGas
 
                           if (lgMdMh) then
                              MhMg=0.
@@ -1670,6 +1671,7 @@ module grid_mod
                              MhMg = 1./MhMg
                              MdMg(i,j,k) = MdMg(i,j,k)*MhMg
                           end if
+                          
 
                           if (.not.lgGas) then
                              print*, '! setMotherGrid: Mass to dust ratio (MdMg) cannot be used in a pure dust (noGas)&
@@ -1702,6 +1704,7 @@ module grid_mod
                        end if
 
                        ! calculate total dust mass
+
                        if (lgDust) then
                           if (lgMultiDustChemistry) then
                              nsp = grid%dustAbunIndex(grid%active(i,j,k))
@@ -1730,6 +1733,7 @@ module grid_mod
 
 
            if(allocated(MdMg)) deallocate(MdMg)
+
 
            if (taskid == 0) then
 
