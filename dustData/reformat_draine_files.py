@@ -65,7 +65,7 @@ def reformat_dust_data(input_file, output_file):
                     # else:
                     #     break
                     data_line = lines[i].split()
-                    wavelength, q_ext, q_abs, q_sca, g_cos = map(float, data_line)
+                    wavelength, q_abs, q_sca, g_cos = map(float, data_line)
                     data.append([radius, wavelength, q_abs, q_sca, g_cos])
                     i += 1
             else:
@@ -81,6 +81,6 @@ def reformat_dust_data(input_file, output_file):
         print("No data found to reformat.")
 
 if __name__ == "__main__":
-    input_file = "/home/hmonteiro/Downloads/mocassin_HM_2025/mocassin_HM_2025/dustData/PAHneu_30/PAHneu_30.out"  # Replace with the name of your input file
-    output_file = "/home/hmonteiro/Downloads/mocassin_HM_2025/mocassin_HM_2025/dustData/PAHneu_30/PAHneu_30.cat" # Replace with the desired name for your output file
+    input_file = "/home/hmonteiro/Downloads/mocassin_HM_2025/mocassin_HM_2025/dustData/Sil_21"  # Replace with the name of your input file
+    output_file = "/home/hmonteiro/Downloads/mocassin_HM_2025/mocassin_HM_2025/dustData/Sil_21.cat" # Replace with the desired name for your output file
     reformat_dust_data(input_file, output_file)
