@@ -429,6 +429,8 @@ module common_mod
     real               :: densityLaw(3)    ! density law parameters (R1,n,f,N0)
     real, allocatable       :: grainAbun(:,:)     ! abundance of this species
     real, allocatable       :: grainRadius(:)   ! grain radius [um]
+    real, allocatable       :: componentMinRadius(:,:)   ! grain minimum radius [um] for species
+    real, allocatable       :: componentMaxRadius(:,:)   ! grain maximum radius [um] for species
     real, allocatable       :: grainWeight(:)   ! grain weight normalised to 1
     real, allocatable       :: viewPointTheta(:),viewPointPhi(:)     ! viewing angles
     real               :: Hdensity         ! constant H density values (cm-^3)

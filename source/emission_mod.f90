@@ -181,10 +181,12 @@ module emission_mod
 
         species: do n = 1, nSpeciesPart(nspE)
            do ai = 1, nSizes
+           
+              if (grainRadius(ai) >= componentMinRadius(nspE, n) .and. grainRadius(ai) <= componentMaxRadius(nspE, n)) then
 
-              if (grids(iG)%Tdust(n,ai,cellPUsed)>0. .and. &
-                   & grids(iG)%Tdust(n,ai,cellPUsed)<TdustSublime(dustComPoint(nspE)-1+n)) exit species
-
+                 if (grids(iG)%Tdust(n,ai,cellPUsed)>0. .and. &
+                      & grids(iG)%Tdust(n,ai,cellPUsed)<TdustSublime(dustComPoint(nspE)-1+n)) exit species
+              endif
 
            end do
         end do species
@@ -1054,53 +1056,56 @@ module emission_mod
            normDust       = 0.
            do ai = 1, nSizes
               do nS = 1, nSpeciesPart(nspE)
+                 
+                 if (grainRadius(ai) >= componentMinRadius(nspE, nS) .and. grainRadius(ai) <= componentMaxRadius(nspE, nS)) then
 
-                 if (grids(iG)%Tdust(nS,ai,cellPUsed)<TdustSublime(dcp-1+nS)) then
+                    if (grids(iG)%Tdust(nS,ai,cellPUsed)<TdustSublime(dcp-1+nS)) then
 
-                    if (lgQHeat .and. grainRadius(ai)<minaQHeat .and. &
-                         & convPercent>minConvQheat .and. nIterateMC>1) then
+                       if (lgQHeat .and. grainRadius(ai)<minaQHeat .and. convPercent>minConvQheat .and. nIterateMC>1) then
 
-                       tg =  grids(iG)%Tdust(nS,ai,cellPused)
-                       Tspike=0.
-                       Pspike=0.
+                          tg =  grids(iG)%Tdust(nS,ai,cellPused)
+                          Tspike=0.
+                          Pspike=0.
 
-                       call qHeat(nS, ai,tg,Tspike,Pspike)
+                          call qHeat(nS, ai,tg,Tspike,Pspike)
 
-                       if (lgWritePss .and. taskid==0) then
-                          write(89, *) '              ix iy iz cellp nSpecies aRadius Teq'
-                          write(89, *)  ix, iy, iz, cellpUsed, ns, grainRadius(ai), tg
-                          write(89, *) '              i Tspike(i) Pspike(i)'
-                          do iT = 1, nTbins
-                             write(89, *) it, Tspike(it), Pspike(it)
+                          if (lgWritePss .and. taskid==0) then
+                             write(89, *) '              ix iy iz cellp nSpecies aRadius Teq'
+                             write(89, *)  ix, iy, iz, cellpUsed, ns, grainRadius(ai), tg
+                             write(89, *) '              i Tspike(i) Pspike(i)'
+                             do iT = 1, nTbins
+                                write(89, *) it, Tspike(it), Pspike(it)
+                             end do
+                             write(89, *) 'Tmean: ', tg
+                             write(89, *) ' '
+                          end if
+
+                          do freq = 1, nbins
+                             do iT=1,nTbins
+                                treal = real(Tspike(iT))
+                                bb = getFlux(nuArray(freq), treal, cShapeLoc)
+                                sumDiffuseDust(freq) = sumDiffuseDust(freq) + &
+                                     &  real(xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
+                                     & grainWeight(ai)*grainAbun(nspE, nS)*Pspike(iT))
+                                normDust = normDust+real(xSecArray(dustAbsXsecP(dcp+nS-1,ai)+freq-1)*bb*widFlx(freq)*&
+                                     & grainWeight(ai)*grainAbun(nspE, nS)*Pspike(iT))
+                             end do
                           end do
-                          write(89, *) 'Tmean: ', tg
-                          write(89, *) ' '
-                       end if
 
-                       do freq = 1, nbins
-                          do iT=1,nTbins
-                             treal = real(Tspike(iT))
-                             bb = getFlux(nuArray(freq), treal, cShapeLoc)
+                       else
+
+                          do freq = 1, nbins
+                             bb = getFlux(nuArray(freq), grids(iG)%Tdust(nS,ai,cellPUsed), cShapeLoc)
                              sumDiffuseDust(freq) = sumDiffuseDust(freq) + &
-                                  &  real(xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
-                                  & grainWeight(ai)*grainAbun(nspE, nS)*Pspike(iT))
-                             normDust = normDust+real(xSecArray(dustAbsXsecP(dcp+nS-1,ai)+freq-1)*bb*widFlx(freq)*&
-                                  & grainWeight(ai)*grainAbun(nspE, nS)*Pspike(iT))
+                                  &  xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
+                                  & grainWeight(ai)*grainAbun(nspE,nS)
+                             normDust = normDust+xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
+                                  & grainWeight(ai)*grainAbun(nspE, nS)
                           end do
-                       end do
-
-                    else
-
-                       do freq = 1, nbins
-                          bb = getFlux(nuArray(freq), grids(iG)%Tdust(nS,ai,cellPUsed), cShapeLoc)
-                          sumDiffuseDust(freq) = sumDiffuseDust(freq) + &
-                               &  xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
-                               & grainWeight(ai)*grainAbun(nspE,nS)
-                          normDust = normDust+xSecArray(dustAbsXsecP(dcp-1+nS,ai)+freq-1)*bb*widFlx(freq)*&
-                               & grainWeight(ai)*grainAbun(nspE, nS)
-                       end do
-                    end if
-                 end if
+                       end if
+                    end if 
+                    
+                 endif !!! grain size interval if block
 
               end do
            end do
@@ -1331,44 +1336,49 @@ module emission_mod
       grids(iG)%dustPDF(grids(iG)%active(ix,iy,iz),:)=0.
       do n = 1, nSpeciesPart(nspE)
          do ai = 1, nSizes
+         
+            if (grainRadius(ai) >= componentMinRadius(nspE, n) .and. grainRadius(ai) <= componentMaxRadius(nspE, n)) then
 
-            if (grids(iG)%Tdust(n,ai,cellPUsed) >0. .and. &
-                 & grids(iG)%Tdust(n,ai,cellPused)<TdustSublime(dcp-1+n)) then
+               if (grids(iG)%Tdust(n,ai,cellPUsed) >0. .and. &
+                    & grids(iG)%Tdust(n,ai,cellPused)<TdustSublime(dcp-1+n)) then
 
 
-               if (lgQHeat .and. grainRadius(ai)<minaQHeat .and. &
-                    & convPercent>minConvQheat.and. nIterateMC>1) then
+                  if (lgQHeat .and. grainRadius(ai)<minaQHeat .and. &
+                       & convPercent>minConvQheat.and. nIterateMC>1) then
 
-                  tg =  grids(iG)%Tdust(n,ai,cellPused)
+                     tg =  grids(iG)%Tdust(n,ai,cellPused)
 
-                  Tspike=0.
-                  Pspike=0.
+                     Tspike=0.
+                     Pspike=0.
 
-                  call qHeat(n, ai,tg,Tspike,Pspike)
+                     call qHeat(n, ai,tg,Tspike,Pspike)
 
-                  do i = 1, nbins
-                     do iT = 1, nTbins
-                        treal = real(Tspike(iT))
-                        bb = getFlux(nuArray(i), treal, cShapeLoc)
-                        grids(iG)%dustPDF(cellPUsed, i) = grids(iG)%dustPDF(cellPUsed, i)+ &
-                             & real(xSecArray(dustAbsXsecP(dcp-1+n,ai)+i-1)*bb*widFlx(i)*&
-                             & grainWeight(ai)*&
-                             & grainAbun(nspE, n)*Pspike(iT))
+                     do i = 1, nbins
+                        do iT = 1, nTbins
+                           treal = real(Tspike(iT))
+                           bb = getFlux(nuArray(i), treal, cShapeLoc)
+                           grids(iG)%dustPDF(cellPUsed, i) = grids(iG)%dustPDF(cellPUsed, i)+ &
+                                & real(xSecArray(dustAbsXsecP(dcp-1+n,ai)+i-1)*bb*widFlx(i)*&
+                                & grainWeight(ai)*&
+                                & grainAbun(nspE, n)*Pspike(iT))
+                        end do
                      end do
-                  end do
 
-               else
+                  else
 
-                  do i = 1, nbins
-                     treal = grids(iG)%Tdust(n,ai,cellPused)
-                     bb = getFlux(nuArray(i), treal, cShapeLoc)
-                     grids(iG)%dustPDF(cellPused, i) = grids(iG)%dustPDF(cellPused, i)+&
-                          & xSecArray(dustAbsXsecP(n+dcp-1,ai)+i-1)*bb*widFlx(i)*&
-                          & grainWeight(ai)*grainAbun(nspE, n)
-                  end do
-               end if
+                     do i = 1, nbins
+                        treal = grids(iG)%Tdust(n,ai,cellPused)
+                        bb = getFlux(nuArray(i), treal, cShapeLoc)
+                        grids(iG)%dustPDF(cellPused, i) = grids(iG)%dustPDF(cellPused, i)+&
+                             & xSecArray(dustAbsXsecP(n+dcp-1,ai)+i-1)*bb*widFlx(i)*&
+                             & grainWeight(ai)*grainAbun(nspE, n)
+                     end do
+                  end if
 
-            end if
+               end if 
+               
+            endif   ! end of grain size interval block           
+            
          end do
       end do
 
