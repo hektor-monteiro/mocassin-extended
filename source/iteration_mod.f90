@@ -23,6 +23,10 @@ module iteration_mod
 
        integer :: i, j, k                     ! counters
 
+       ! To perform message spliting in mpi
+       integer :: chunk_start, chunk_end, chunk_size, chunk, nCells
+       integer :: num_chunks, chunk_elements
+       real, allocatable :: temp_chunk(:,:,:)
 
        call iterateMC()
 
@@ -60,7 +64,7 @@ module iteration_mod
            integer                :: ifreq, ian      ! counters
            integer                :: ios,iG          ! I/O error status
            integer(kind=8)        :: load,rest       !
-           integer                :: size            ! size for mpi
+           integer(kind=int64)    :: size            ! size for mpi
            integer                :: iCell           ! cell index including non-active
            integer                :: iStar           ! star index
            integer                :: ai              ! grain size counter
@@ -357,7 +361,6 @@ module iteration_mod
               size =  (grid(iG)%nCells+1)*nbins
 
 
-
               if (lgGas) then
                  call mpi_allreduce(grid(iG)%recPDF, recPDFTemp, size, mpi_real&
                       &, mpi_sum, mpi_comm_world, ierr)
@@ -620,23 +623,63 @@ module iteration_mod
                  linePacketsTemp    = 0.
               end if
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Original
+!              size =  (grid(iG)%nCells+1)*(1+nbins)*(nAngleBins+1)
+              
+!              call mpi_allreduce(grid(iG)%escapedPackets, escapedPacketsTemp, size, &
+!                   & mpi_real, mpi_sum, mpi_comm_world, ierr)
+!              do i = 0, grid(iG)%nCells
+!                 do freq = 0, nbins
+!                    do imu = 0, nAngleBins
+!                       grid(iG)%escapedPackets(i, freq,imu) = escapedPacketsTemp(i, freq, imu)
+!
+!                    end do
+!                 end do
+!              end do
 
-              size =  (grid(iG)%nCells+1)*(1+nbins)*(nAngleBins+1)
 
-              call mpi_allreduce(grid(iG)%escapedPackets, escapedPacketsTemp, size, &
-                   & mpi_real, mpi_sum, mpi_comm_world, ierr)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! Using message spliting
 
-              do i = 0, grid(iG)%nCells
-                 do freq = 0, nbins
-                    do imu = 0, nAngleBins
-                       grid(iG)%escapedPackets(i, freq,imu) = escapedPacketsTemp(i, freq, imu)
+              ! Dimensions of the array
+              nCells = grid(iG)%nCells + 1  ! First dimension size
+              chunk_size = 1000000  ! Maximum size for 32-bit count
+              num_chunks = ceiling(real(nCells) / real(chunk_size))
 
-                    end do
-                 end do
+              ! Allocate temp_chunk to match the slice size
+              allocate(temp_chunk(chunk_size, nbins + 1, nAngleBins + 1))
+
+              do chunk = 1, num_chunks
+                  chunk_start = (chunk - 1) * chunk_size + 1
+                  chunk_end = min(chunk * chunk_size, nCells)
+                  chunk_elements = chunk_end - chunk_start + 1
+                  
+                  print*, 'Doing chunk ',chunk
+
+                  ! Slice the 3D array along the first dimension for MPI_Allreduce
+                  call mpi_allreduce(grid(iG)%escapedPackets(chunk_start:chunk_end, :, :), &
+                                     temp_chunk(1:chunk_elements, :, :), &
+                                     chunk_elements * (nbins + 1) * (nAngleBins + 1), &
+                                     mpi_real, mpi_sum, mpi_comm_world, ierr)
+
+                  if (ierr /= 0) then
+                      print *, "Error in MPI_Allreduce during chunk", chunk, "MPI Error Code:", ierr
+                      stop
+                  endif
+
+                  ! Update the original array with the reduced values
+                  grid(iG)%escapedPackets(chunk_start:chunk_end, :, :) = temp_chunk(1:chunk_elements, :, :)
               end do
 
+              ! Deallocate temp_chunk after use
+              deallocate(temp_chunk)
+
+              
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
               if ( allocated(escapedPacketsTemp) ) deallocate(escapedPacketsTemp)
+
 
 !              if (taskid==0) call writeSED(grid)
 !              if (taskid==0 .and. contCube(1)>0. .and. contCube(2)>0. ) &
@@ -735,7 +778,6 @@ module iteration_mod
            if (taskid==0) print*, " total Escaped Packets :",  totalEscaped
 
            if (taskid==0) call writeSED(grid)
-           print*,'Valores de contCube: ',contCube(1),contCube(2)
            if (taskid==0 .and. contCube(1)>0. .and. contCube(2)>0. ) &
                 & call writeContCube(grid, contCube(1),contCube(2))
 
