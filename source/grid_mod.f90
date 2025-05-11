@@ -2886,96 +2886,79 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
 
 
       ! this function returns the volume of a cell in [e45 cm^3]
-      function getVolume(grid,xP, yP, zP)
-        implicit none
+function getVolume(grid, xP, yP, zP)
+  implicit none
 
-        type(grid_type),intent(in) :: grid              ! the grid
+  type(grid_type), intent(in) :: grid        ! the grid
+  integer, intent(in)         :: xP, yP, zP    ! cell indices
+  real                        :: getVolume     ! volume of the cell [e45 cm^3]
 
-        integer, intent(in)        :: xP, yP, zP        ! cell indeces
+  ! local variables
+  real :: dx, dy, dz         ! cartesian axes increments in [cm]
+  real :: factor
 
-        real                       :: getVolume         ! volume of the cell [e45 cm^3]
+  if (lg1D) then
+    if (nGrids > 1) then
+      print*, '! getVolume: 1D option and multiple grids options are not compatible'
+      stop
+    end if
 
-        ! local variables
+    if (xP == 1) then
+      getVolume = 4.*Pi* ((grid%xAxis(xP+1)/1.e15)**3)/3.
+    else if (xP == grid%nx) then
+      getVolume = Pi* ((3.*(grid%xAxis(xP)/1.e15)-(grid%xAxis(xP-1)/1.e15))**3 - &
+                      ((grid%xAxis(xP)/1.e15)+(grid%xAxis(xP-1)/1.e15))**3 ) / 6.
+    else
+      getVolume = Pi* (((grid%xAxis(xP+1)/1.e15)+(grid%xAxis(xP)/1.e15))**3 - &
+                      ((grid%xAxis(xP-1)/1.e15)+(grid%xAxis(xP)/1.e15))**3 ) / 6.
+    end if
+    getVolume = getVolume/8.
 
-        real                       :: dx, &             ! cartesian axes increments
-&                                      dy, &             ! in [cm]
-&                                      dz                !
+  else
+    ! Determine the factor based on lgSymmetricXYZ
+    if (lgSymmetricXYZ) then
+      factor = 2.0
+    else
+      factor = 1.0
+    end if
 
-        if (lg1D) then
-           if (nGrids>1) then
-              print*, '! getVolume: 1D option and multiple grids options are not compatible'
-              stop
-           end if
+    ! Calculate dx
+    if ((xP > 1) .and. (xP < grid%nx)) then
+      dx = abs(grid%xAxis(xP+1) - grid%xAxis(xP-1)) / 2.0
+    else if (xP == 1) then
+      dx = abs(grid%xAxis(xP+1) - grid%xAxis(xP)) / factor
+    else if (xP == grid%nx) then
+      dx = abs(grid%xAxis(xP)   - grid%xAxis(xP-1)) / factor
+    end if
 
-           if (xP == 1) then
+    ! Calculate dy
+    if ((yP > 1) .and. (yP < grid%ny)) then
+      dy = abs(grid%yAxis(yP+1) - grid%yAxis(yP-1)) / 2.0
+    else if (yP == 1) then
+      dy = abs(grid%yAxis(yP+1) - grid%yAxis(yP)) / factor
+    else if (yP == grid%ny) then
+      dy = abs(grid%yAxis(yP)   - grid%yAxis(yP-1)) / factor
+    end if
 
-              getVolume = 4.*Pi* ( (grid%xAxis(xP+1)/1.e15)**3)/3.
+    ! Calculate dz
+    if ((zP > 1) .and. (zP < grid%nz)) then
+      dz = abs(grid%zAxis(zP+1) - grid%zAxis(zP-1)) / 2.0
+    else if (zP == 1) then
+      dz = abs(grid%zAxis(zP+1) - grid%zAxis(zP)) / factor
+    else if (zP == grid%nz) then
+      dz = abs(grid%zAxis(zP)   - grid%zAxis(zP-1)) / factor
+    end if
 
+    dx = dx / 1.e15
+    dy = dy / 1.e15
+    dz = dz / 1.e15
 
-           else if ( xP==grid%nx) then
+    ! calculate the volume
+    getVolume = dx * dy * dz
 
-              getVolume = Pi* ( (3.*(grid%xAxis(xP)/1.e15)-(grid%xAxis(xP-1)/1.e15))**3 - &
-                   & ((grid%xAxis(xP)/1.e15)+(grid%xAxis(xP-1)/1.e15))**3 ) / 6.
+  end if
 
-           else
-
-              getVolume = Pi* ( ((grid%xAxis(xP+1)/1.e15)+(grid%xAxis(xP)/1.e15))**3 - &
-                   & ((grid%xAxis(xP-1)/1.e15)+(grid%xAxis(xP)/1.e15))**3 ) / 6.
-
-           end if
-
-           getVolume = getVolume/8.
-
-        else
-
-           if ( (xP>1) .and. (xP<grid%nx) ) then
-              dx = abs(grid%xAxis(xP+1)-grid%xAxis(xP-1))/2.
-           else if ( xP==1 ) then
-              if (lgSymmetricXYZ) then
-                 dx = abs(grid%xAxis(xP+1)-grid%xAxis(xP))/2.
-              else
-                 dx = abs(grid%xAxis(xP+1)-grid%xAxis(xP))
-              end if
-           else if ( xP==grid%nx ) then
-              dx = abs(grid%xAxis(xP)  -grid%xAxis(xP-1))
-           end if
-
-           if ( (yP>1) .and. (yP<grid%ny) ) then
-              dy = abs(grid%yAxis(yP+1)-grid%yAxis(yP-1))/2.
-           else if ( yP==1 ) then
-              if (lgSymmetricXYZ) then
-                 dy = abs(grid%yAxis(yP+1)-grid%yAxis(yP))/2.
-              else
-                dy = abs(grid%yAxis(yP+1)-grid%yAxis(yP))
-             end if
-          else if ( yP==grid%ny ) then
-             dy = abs(grid%yAxis(yP)  -grid%yAxis(yP-1))
-          end if
-
-          if ( (zP>1) .and. (zP<grid%nz) ) then
-             dz = abs(grid%zAxis(zP+1)-grid%zAxis(zP-1))/2.
-          else if ( zP==1 ) then
-             if (lgSymmetricXYZ) then
-                dz = abs(grid%zAxis(zP+1)-grid%zAxis(zP))/2.
-             else
-                dz = abs(grid%zAxis(zP+1)-grid%zAxis(zP))
-             end if
-          else if ( zP==grid%nz ) then
-             dz = abs(grid%zAxis(zP)-grid%zAxis(zP-1))
-          end if
-
-          dx = dx/1.e15
-          dy = dy/1.e15
-          dz = dz/1.e15
-
-
-          ! calculate the volume
-          getVolume = dx*dy*dz
-
-
-       end if
-
-    end function getVolume
+end function getVolume
     
 
     subroutine resetGrid(grid)
