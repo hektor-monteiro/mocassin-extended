@@ -1542,7 +1542,12 @@ module grid_mod
           end if ! lgGas
 
            if (lgDust) then
+           
               if(allocated(NdustTemp)) deallocate(NdustTemp)
+              
+              ! allocate array for dust species mass
+              allocate (totalSpecMass(1:nSpecies), stat=err)
+
               if(lgMultiDustChemistry .and. allocated(dustAbunIndexTemp)) deallocate(dustAbunIndexTemp)
            end if
 
@@ -1553,6 +1558,7 @@ module grid_mod
                 & 58.71, 63.546, 65.37 /)
 
            totalDustMass = 0.
+           totalSpecMass = 0.                ! initialize dust species mass
            totalGasMass = 0.
            totalVolume = 0.
            echoVolume = 0.
@@ -1560,7 +1566,9 @@ module grid_mod
            do i = 1, grid%nx
               do j = 1, yTop
                  do k = 1, grid%nz
+                 
                     grid%echoVol(i,j,k)=0. ! initialize
+                    
                     if (grid%active(i,j,k)>0) then
 
                        dV = getVolume(grid,i,j,k)
@@ -1577,9 +1585,9 @@ module grid_mod
                        end if
 
                        totalVolume = totalVolume + dV
-!
-! echoes only
-!
+
+                       ! echoes only
+
                        if (lgEcho) then
                           grid%echoVol(i,j,k)=vEcho(grid,i,j,k,echot1,echot2,vol)
                           echoVolume = echoVolume + vol
@@ -1587,7 +1595,6 @@ module grid_mod
                        
                        
                        if (lgDust .and. (lgMdMg.or.lgMdMh) ) then
-                          print*, 'Passou...', lgGas
 
                           if (lgMdMh) then
                              MhMg=0.
@@ -1616,7 +1623,7 @@ module grid_mod
                           else
                              nsp = 1
                           end if
-!print*, nsp, 'here!'
+
                           do nspec = 1, nSpeciesPart(nsp)
                              do ai = 1, nSizes
                                 if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
@@ -1631,25 +1638,33 @@ module grid_mod
                                & (denominator)
                        end if
 
+                       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                        ! calculate total dust mass
-
+                       !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!                       
                        if (lgDust) then
                           if (lgMultiDustChemistry) then
                              nsp = grid%dustAbunIndex(grid%active(i,j,k))
                           else
                              nsp = 1
                           end if
-
-                          do ai = 1, nsizes
-                             do nspec = 1, nspeciesPart(nsp)
+                          
+                          do nspec = 1, nspeciesPart(nsp)   ! this is the species loop
+                                                  
+                             do ai = 1, nsizes
                                 if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
-                                   totalDustMass = totalDustMass + &
+                                
+                                   totalSpecMass(nspec) = totalSpecMass(nspec) + &
                                         &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
                                         & rho(dustComPoint(nsp)-1+nspec)*grainWeight(ai)*&
                                         & grainAbun(nsp,nspec))*grid%Ndust(grid%active(i,j,k))*dV
+                                        
                                 endif
-                             end do
-                          end do
+                             end do ! grain radius loop 
+
+                             
+                          end do ! species loop
+                          
+                          !totalDustMass = totalDustMass + SUM(totalSpecMass)
 
                        end if
 
@@ -1657,27 +1672,35 @@ module grid_mod
                  end do
               end do
            end do
+           
+           totalDustMass = SUM(totalSpecMass)
 
 
 
            if(allocated(MdMg)) deallocate(MdMg)
 
 
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+           ! Print to screen the total masses of input grid used
+           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
            if (taskid == 0) then
 
-              print*, 'Mothergrid :'
+              print*, 'Mothergrid:'
               if (lgGas) then
                  print*, 'Total gas mass of ionized region by mass [1.e45 g]: ', totalGasMass
                  print*, '                                         [Msol]   : ', totalGasMass*5.025e11
               end if
               if (lgDust) then
+                 do nspec = 1, nspeciesPart(nsp) 
+                    print*, 'Total dust mass of species ', grainLabel(nspec) ,' [Msol]: ', totalSpecMass(nspec)*5.025e11
+                 enddo
+                 
                  print*, 'Total dust mass of ionized region by mass [1.e45 g]: ', totalDustMass
                  print*, '                                          [Msol]   : ', totalDustMass*5.025e11
               end if
               print*, 'Total volume of the active region [e45 cm^3]: ', totalVolume
 
-! break if no gas or dust present
-
+              ! break if no gas or dust present
               if (totalGasMass + totalDustMass .eq. 0.) then
                 print *,"! fillGrid: total mass in grid is zero. Terminating."
                 stop
