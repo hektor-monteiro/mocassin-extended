@@ -734,25 +734,28 @@ module grid_mod
               totCellsloc = totCellsloc+grid(i)%nCells
            end do
 
-           if (taskid==0) print*, '! fillGrid: total number of active cells over all grids: ', totCells
+           if (taskid==0) then
+              print*, '! fillGrid: total number of active cells over all grids: ', totCells
 
-           if (lgGas) then
-              if (lgSymmetricXYZ) totalGasMass=totalGasMass*8.
-              print*, 'fillGrid: Actual total gas mass [1.e45 g]: ', totalGasMass
-              print*, 'fillGrid: Actual total gas mass [Msol]: ', totalGasMass*5.028e11
-           end if
-           if (lgDust) then
-              if (lgSymmetricXYZ) then
-                  totalDustMass=totalDustMass*8.
-                  totalSpecMass=totalSpecMass*8.
-              endif
-              do nspec = 1, nSpecies
-                 print*, 'fillGrid: Actual Total dust mass of species ', grainLabel(nspec) ,' [Msol]: ', totalSpecMass(nspec)*5.025e11
-              enddo
+              if (lgGas) then
+                 if (lgSymmetricXYZ) totalGasMass=totalGasMass*8.
+                 print*, 'fillGrid: Actual total gas mass [1.e45 g]: ', totalGasMass
+                 print*, 'fillGrid: Actual total gas mass [Msol]: ', totalGasMass*5.028e11
+              end if
+              
+              if (lgDust) then
+                 if (lgSymmetricXYZ) then
+                     totalDustMass=totalDustMass*8.
+                     totalSpecMass=totalSpecMass*8.
+                 endif
+                 do nspec = 1, nSpecies
+                    print*, 'fillGrid: Actual Total dust mass of species ', grainLabel(nspec) ,' [Msol]: ', totalSpecMass(nspec)*5.025e11
+                 enddo
            
-              print*, 'fillGrid: Actual total dust mass [1.e45 g]: ', totalDustMass
-              print*, 'fillGrid: Actual total dust mass [Msol]: ', totalDustMass*5.028e11
-           end if
+                 print*, 'fillGrid: Actual total dust mass [1.e45 g]: ', totalDustMass
+                 print*, 'fillGrid: Actual total dust mass [Msol]: ', totalDustMass*5.028e11
+              end if
+           endif
 
            if (nPhotonsDiffuse > 0 .and. nPhotonsDiffuse < totCellsloc) then
               print*, '! fillGrid: total number of active cells is larger than the &
