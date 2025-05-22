@@ -68,7 +68,7 @@ module common_mod
     real            :: dPhi                    !
     real            :: nu0                     !
     real            :: nu0Add                  !
-    real            :: totalDustMass
+    real            :: totalDustMass           ! total dust mass 
     real            :: totalGasMass
     real            :: inputDustMass           ! for when user sets desired dust mass in input
     real            :: inputGasMass           ! for when user sets desired gas mass in input
@@ -182,7 +182,8 @@ module common_mod
     real, allocatable :: dustHeatingBudget(:,:) ! heating budget of grains (nAbComponents, nResLines+1)
     real, allocatable :: SEDnoExt(:)            ! SED no extinction
     real, allocatable :: equivalentTau(:)       ! SED no extinction
-
+    real, allocatable :: totalSpecMass(:)      ! Total dust species mass (nspecies)
+    
     double precision, save, allocatable::&
           & forbiddenLines(:,:,:,:)                                 ! emissivity from heavies  rec lines
     double precision, save, allocatable::&
