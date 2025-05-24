@@ -2719,7 +2719,7 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
                     end if
                     if (lgDust) then
 
-                       if (lgMultiChemistry) then
+                       if (lgMultiDustChemistry) then
                           write(50, *) grid(iG)%Ndust(cellP), grid(iG)%dustAbunIndex(cellP)
                        else
                           write(50, *) grid(iG)%Ndust(cellP)
