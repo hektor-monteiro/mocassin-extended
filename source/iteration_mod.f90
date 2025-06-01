@@ -644,18 +644,19 @@ module iteration_mod
 
               ! Dimensions of the array
               nCells = grid(iG)%nCells + 1  ! First dimension size
-              chunk_size = 1000000  ! Maximum size for 32-bit count
+              chunk_size = MIN(grid(iG)%nx*grid(iG)%ny*grid(iG)%nz,1000000)  ! Maximum size for 32-bit count
               num_chunks = ceiling(real(nCells) / real(chunk_size))
 
               ! Allocate temp_chunk to match the slice size
               allocate(temp_chunk(chunk_size, nbins + 1, nAngleBins + 1))
 
+              if (taskid==0) print*, '! iterateMC: chunk size = ',chunk_size
               do chunk = 1, num_chunks
                   chunk_start = (chunk - 1) * chunk_size + 1
                   chunk_end = min(chunk * chunk_size, nCells)
                   chunk_elements = chunk_end - chunk_start + 1
                   
-                  print*, 'Doing chunk ',chunk
+                  if (taskid==0) print*, '! iterateMC: Doing chunk ',chunk
 
                   ! Slice the 3D array along the first dimension for MPI_Allreduce
                   call mpi_allreduce(grid(iG)%escapedPackets(chunk_start:chunk_end, :, :), &
