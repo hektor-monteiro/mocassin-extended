@@ -592,13 +592,13 @@ module iteration_mod
 
 
 
-              allocate(escapedPacketsTemp(0:grid(iG)%nCells, 0:nbins, 0:nAngleBins), stat = err)
-              if (err /= 0) then
-                 print*, "! iterateMC: can't allocate grid memory: escapedPacketsTemp", iG
-                 stop
-              end if
+!              allocate(escapedPacketsTemp(0:grid(iG)%nCells, 0:nbins, 0:nAngleBins), stat = err)
+!              if (err /= 0) then
+!                 print*, "! iterateMC: can't allocate grid memory: escapedPacketsTemp", iG
+!                 stop
+!              end if
 
-              escapedPacketsTemp  = 0.
+!              escapedPacketsTemp  = 0.
 
               allocate(JSteTemp(0:grid(iG)%nCells, nbins), stat = err)
               if (err /= 0) then
@@ -678,7 +678,7 @@ module iteration_mod
               
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-              if ( allocated(escapedPacketsTemp) ) deallocate(escapedPacketsTemp)
+!              if ( allocated(escapedPacketsTemp) ) deallocate(escapedPacketsTemp)
 
 
 !              if (taskid==0) call writeSED(grid)
