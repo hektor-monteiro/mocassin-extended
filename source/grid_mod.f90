@@ -1557,6 +1557,7 @@ module grid_mod
               
               ! allocate array for dust species mass
               allocate (totalSpecMass(1:nSpecies), stat=err)
+              totalSpecMass = 0.                ! initialize dust species mass
 
               if(lgMultiDustChemistry .and. allocated(dustAbunIndexTemp)) deallocate(dustAbunIndexTemp)
            end if
@@ -1567,8 +1568,7 @@ module grid_mod
                 & 39.948, 39.102, 40.08, 44.956, 47.90, 50.9414, 51.996, 54.9380, 55.847, 58.9332, &
                 & 58.71, 63.546, 65.37 /)
 
-           totalDustMass = 0.
-           totalSpecMass = 0.                ! initialize dust species mass
+           totalDustMass = 0.           
            totalGasMass = 0.
            totalVolume = 0.
            echoVolume = 0.
@@ -1683,7 +1683,9 @@ module grid_mod
               end do
            end do
            
-           totalDustMass = SUM(totalSpecMass)
+           if (lgDust) then
+              totalDustMass = SUM(totalSpecMass)
+           endif
 
 
 
