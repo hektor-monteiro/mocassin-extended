@@ -2030,10 +2030,13 @@ module emission_mod
              qomInt = atomic_data_array(elem,ion)%qq(1) + &
                   (atomic_data_array(elem,ion)%qq(2)-atomic_data_array(elem,ion)%qq(1)) / (atomic_data_array(elem,ion)%logTemp(2)-atomic_data_array(elem,ion)%logTemp(1)) * (log10Te - atomic_data_array(elem,ion)%logTemp(1))
           else
-             ! set up second derivatives for spline interpolation
-             call spline(atomic_data_array(elem,ion)%logTemp, atomic_data_array(elem,ion)%qq, 1.e30, 1.e30,  atomic_data_array(elem,ion)%qq2)
-             ! get interpolated qom for level
-             call splint(atomic_data_array(elem,ion)%logTemp, atomic_data_array(elem,ion)%qq, atomic_data_array(elem,ion)%qq2, log10Te, qomInt)
+!             ! set up second derivatives for spline interpolation
+!             call spline(atomic_data_array(elem,ion)%logTemp, atomic_data_array(elem,ion)%qq, 1.e30, 1.e30,  atomic_data_array(elem,ion)%qq2)
+!             ! get interpolated qom for level
+!             call splint(atomic_data_array(elem,ion)%logTemp, atomic_data_array(elem,ion)%qq, atomic_data_array(elem,ion)%qq2, log10Te, qomInt)
+             
+             call linear_interpolation(atomic_data_array(elem,ion)%logTemp, atomic_data_array(elem,ion)%qq, log10Te, qomInt)
+             
           end if
 
           ! set collisional strength
