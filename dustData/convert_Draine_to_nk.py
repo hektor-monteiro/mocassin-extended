@@ -18,47 +18,46 @@ def convert_draine_OptData_file(input_filename="callindex.out_sil.D03", output_f
         output_filename (str): The name of the output file (e.g., "astrosil_nk.txt").
     """
     try:
-        # Read the header to find the number of wavelengths
+        # Read the header to find the number of wavelengths and data start line
         with open(input_filename, 'r') as f_in:
             lines = f_in.readlines()
-            # Find the line containing "number of wavelengths"
-            num_wavelengths_line = [line for line in lines if "number of wavelengths" in line][0]
-            num_wavelengths = int(num_wavelengths_line.split('=')[0].strip())
+            data_start_line = 0
+            for i, line in enumerate(lines):
+                if "wave(um)" in line:
+                    data_start_line = i + 1
+                    break
+            if data_start_line == 0:
+                raise ValueError("Could not find 'wave(um)' header line in the input file.")
 
-        # Determine the starting line of the data by skipping header lines
-        # We know there are 4 header lines before the column names, and then the data starts.
-        # So, the data starts on the 6th line (index 5) if we count from 0.
-        # Alternatively, find the line that starts with "wave(um)" and the next line is data.
-        data_start_line = 0
-        for i, line in enumerate(lines):
-            if "wave(um)" in line:
-                data_start_line = i + 1
-                break
-        
         # Load the data using numpy.genfromtxt, skipping the header lines
-        # We need to skip data_start_line lines.
         data = np.genfromtxt(input_filename, skip_header=data_start_line)
 
         # Extract the relevant columns
         # Column 0: wavelength (um)
         # Column 3: Re(n)-1
         # Column 4: Im(n) which is k
-        wavelength = data[:, 0]
+        wavelength_raw = data[:, 0]
         re_n_minus_1 = data[:, 3]
         im_n = data[:, 4]
 
         # Calculate n by adding 1 to Re(n)-1
-        n = re_n_minus_1 + 1.0
-        k = im_n # Im(n) is already k
+        n_values = re_n_minus_1 + 1.0
+        k_values = im_n # Im(n) is already k
 
-        # Combine into a new array for saving
-        output_data = np.column_stack((wavelength, n, k))
+        # Combine into a new array for sorting
+        combined_data = np.column_stack((wavelength_raw, n_values, k_values))
+
+        # Sort the combined_data array by the first column (wavelength) in ascending order
+        # np.argsort returns the indices that would sort an array
+        # We then use these indices to reorder the rows of combined_data
+        sorted_indices = np.argsort(combined_data[:, 0])
+        sorted_output_data = combined_data[sorted_indices]
 
         # Save to the new file
         header = "wavelength        n          k"
-        np.savetxt(output_filename, output_data, fmt='%.6e', header=header, comments='# ')
+        np.savetxt(output_filename, sorted_output_data, fmt='%.6e', header=header, comments='# ')
 
-        print(f"Successfully converted '{input_filename}' to '{output_filename}'.")
+        print(f"Successfully converted and sorted '{input_filename}' to '{output_filename}'.")
 
     except FileNotFoundError:
         print(f"Error: Input file '{input_filename}' not found.")
