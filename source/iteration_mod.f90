@@ -652,9 +652,15 @@ module iteration_mod
 
               if (taskid==0) print*, '! iterateMC: chunk size = ',chunk_size
               do chunk = 1, num_chunks
-                  chunk_start = (chunk - 1) * chunk_size + 1
-                  chunk_end = min(chunk * chunk_size, nCells)
-                  chunk_elements = chunk_end - chunk_start + 1
+              
+!                  chunk_start = (chunk - 1) * chunk_size + 1
+!                  chunk_end = min(chunk * chunk_size, nCells)
+!                  chunk_elements = chunk_end - chunk_start + 1
+                  
+                  chunk_start = (chunk - 1) * chunk_size  ! Start from 0, not 1
+                  chunk_end = min(chunk * chunk_size - 1, nCells - 1) ! End index, not count, and adjust for 0-indexing
+                                                    ! nCells is total count, so last index is nCells - 1
+                  chunk_elements = chunk_end - chunk_start + 1                   
                   
                   if (taskid==0) print*, '! iterateMC: Doing chunk ',chunk
 

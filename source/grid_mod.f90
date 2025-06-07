@@ -2589,9 +2589,11 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
                  if(allocated(grid%dustPDF)) deallocate(grid%dustPDF)
               end if
            end if
+           
            if (allocated(grid%active)) deallocate(grid%active)
            if (allocated(grid%lgConverged)) deallocate(grid%lgConverged)
            if (allocated(grid%lgBlack)) deallocate(grid%lgBlack)
+           
            if (lgGas) then
               if (allocated(grid%abFileIndex)) deallocate(grid%abFileIndex)
               if (allocated(grid%Te)) deallocate(grid%Te)
@@ -2602,13 +2604,16 @@ if (allocated(ionDenUsed)) deallocate (ionDenUsed)
               if (allocated(grid%recPDF)) deallocate(grid%recPDF)
               if (allocated(grid%totalLines)) deallocate(grid%totalLines)
            end if
+           
            if (allocated(grid%opacity)) deallocate(grid%opacity)
+
            if (allocated(grid%Jste)) deallocate(grid%Jste)
-!BS10           if (lgDebug) then
+
+           if (lgDebug) then
               if (allocated(grid%Jdif)) deallocate(grid%Jdif)
               if (allocated(grid%linePackets)) deallocate(grid%linePackets)
               if (allocated(grid%linePDF)) deallocate(grid%linePDF)
-!BS10           end if
+           end if
            if (lgNeInput) then
                if (allocated(grid%NeInput)) deallocate(grid%NeInput)
            end if
