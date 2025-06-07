@@ -647,16 +647,9 @@ module iteration_mod
               chunk_size = MIN(grid(iG)%nx*grid(iG)%ny*grid(iG)%nz,1000000)  ! Maximum size for 32-bit count
               num_chunks = ceiling(real(nCells) / real(chunk_size))
 
-              ! Allocate temp_chunk to match the slice size
-              !allocate(temp_chunk(chunk_size, nbins + 1, nAngleBins + 1))
-
               if (taskid==0) print*, '! iterateMC: chunk size = ',chunk_size
               do chunk = 1, num_chunks
-              
-!                  chunk_start = (chunk - 1) * chunk_size + 1
-!                  chunk_end = min(chunk * chunk_size, nCells)
-!                  chunk_elements = chunk_end - chunk_start + 1
-                  
+                                
                   chunk_start = (chunk - 1) * chunk_size  ! Start from 0, not 1
                   chunk_end = min(chunk * chunk_size - 1, nCells - 1) ! End index, not count, and adjust for 0-indexing
                                                     ! nCells is total count, so last index is nCells - 1
@@ -665,10 +658,6 @@ module iteration_mod
                   if (taskid==0) print*, '! iterateMC: Doing chunk ',chunk
 
                   ! Slice the 3D array along the first dimension for MPI_Allreduce
-!                  call mpi_allreduce(grid(iG)%escapedPackets(chunk_start:chunk_end, :, :), &
-!                                     temp_chunk(1:chunk_elements, :, :), &
-!                                     chunk_elements * (nbins + 1) * (nAngleBins + 1), &
-!                                     mpi_real, mpi_sum, mpi_comm_world, ierr)
 
                   call mpi_allreduce(MPI_IN_PLACE, grid(iG)%escapedPackets(chunk_start:chunk_end, :, :), &
                        chunk_elements * (nbins + 1) * (nAngleBins + 1), &
@@ -679,25 +668,8 @@ module iteration_mod
                       stop
                   endif
 
-                  ! Update the original array with the reduced values
-                  !grid(iG)%escapedPackets(chunk_start:chunk_end, :, :) = temp_chunk(1:chunk_elements, :, :)
               end do
 
-              ! Deallocate temp_chunk after use
-              !deallocate(temp_chunk)
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!               size =  (grid(iG)%nCells+1)*(1+nbins)*(nAngleBins+1)
-!               call mpi_allreduce(MPI_IN_PLACE, grid(iG)%escapedPackets, size, &
-!                    & mpi_real, mpi_sum, mpi_comm_world, ierr)              
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!              if ( allocated(escapedPacketsTemp) ) deallocate(escapedPacketsTemp)
-
-
-!              if (taskid==0) call writeSED(grid)
-!              if (taskid==0 .and. contCube(1)>0. .and. contCube(2)>0. ) &
-!                   & call writeContCube(grid, contCube(1),contCube(2))
 
               size =  (grid(iG)%nCells+1)*nbins
 
