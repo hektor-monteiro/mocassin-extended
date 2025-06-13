@@ -1483,32 +1483,30 @@ module xSec_mod
 
            ! complex refraction index
            refIndex = cmplx(Ere_in(i),Eim_in(i))
-
+           
+           
            do ai = 1, nSizes
-              
-              if (grainRadius(ai) > amin .and. grainRadius(ai) < amax) then 
+                               
+		 ! size parameter
+		 sizeParam=2.0*3.14159265*grainRadius(ai)/( 2.9979250e14/(nuArray(i)*fr1Ryd) )
+
+		 ! if size parameter > 100 use 100 (geometrical optics)
+		 if (sizeParam > 100.) sizeParam=100.
+
+		 ! now calculate the efficiencies
+		 !call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
+		 
+		 if (sizeParam < 1) then 
+		    call CDE_efficiency(grainRadius(ai), refIndex, 2.9979250e14/(nuArray(i)*fr1Ryd), Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
+		 else 
+		    call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
+		 endif
+		 
+                 ! Qabs here is the Qext returned by BHMie
+		 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
+
+		 if (.not.lgDustScattering) Qsca(ai,i)=0.
                  
-                 ! size parameter
-                 sizeParam=2.0*3.14159265*grainRadius(ai)/( 2.9979250e14/(nuArray(i)*fr1Ryd) )
-
-                 ! if size parameter > 100 use 100 (geometrical optics)
-                 if (sizeParam > 100.) sizeParam=100.
-
-                 ! now calculate the efficiencies
-                 call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
-
-                 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
-
-                 if (.not.lgDustScattering) Qsca(ai,i)=0.
-                 
-              else ! if grain size is outside the range for the given species set all to 0
-              
-                 Qabs(ai,i) = 0.
-                 Qsca(ai,i) = 0.
-                 ggCos(ai,i) = 0.
-                 
-              endif         
-
            end do
 
         end do
@@ -1685,6 +1683,96 @@ module xSec_mod
 
 
     end subroutine BHmie
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+! This subroutine calculates the scattering efficiencies for a continuous distribution of ellipsoids (CDE)
+! https://www.aanda.org/articles/aa/pdf/2003/22/aah4358.pdf
+! based on the input particle radius, complex refractive index, and wavelength.
+! It returns the scattering, absorption, and extinction efficiencies.
+!
+! Inputs:
+!   a          : Particle radius 
+!   refIndex   : Complex refractive index 
+!   wavelength : Wavelength of light 
+!
+! Outputs:
+!   qext : Extinction efficiency 
+!   qsca : Scattering efficiency 
+!   ggsca : assymetry factor 
+!
+SUBROUTINE CDE_efficiency(a, refIndex, wavelength, qext,qsca,ggsca)
+    IMPLICIT NONE
+
+    ! Define double precision kind first
+    INTEGER, PARAMETER :: dp = 4
+    ! Input variables
+    REAL(kind=dp), INTENT(IN) :: a            ! Particle radius
+    COMPLEX, INTENT(IN) :: refIndex  ! Complex refractive index (N + iK)
+    REAL(kind=dp), INTENT(IN) :: wavelength   ! Wavelength
+
+    ! Output variables
+    REAL(kind=dp), INTENT(OUT) :: qext    ! Scattering efficiency
+    REAL(kind=dp), INTENT(OUT) :: qsca    ! Absorption efficiency
+    REAL(kind=dp), INTENT(OUT) :: ggsca    ! Absorption efficiency
+
+    ! Local variables
+    COMPLEX          :: m
+    REAL(kind=dp)    :: k_wavenumber
+    REAL(kind=dp)    :: V
+    REAL(kind=dp)    :: Ag
+    COMPLEX          :: alpha
+    REAL(kind=dp)    :: sigma_denominator
+    REAL(kind=dp)    :: sigma
+    REAL(kind=dp)    :: cde_cabs
+    REAL(kind=dp)    :: cde_csca
+    REAL(kind=dp)    :: cde_qsca    ! Scattering efficiency
+    REAL(kind=dp)    :: cde_qabs    ! Absorption efficiency
+    REAL(kind=dp)    :: cde_qext    ! Extinction efficiency
+
+    REAL(kind=dp), PARAMETER :: PI = ACOS(-1.0)
+
+    ! Complex refractive index 'm'
+    m = refIndex
+    k_wavenumber = (2.0 * PI) / wavelength
+
+    ! Assuming spherical particle volume
+    V = (4.0 / 3.0) * PI * (a**3)
+    ! Calculate geometrical cross-section (Ag)
+    Ag = PI * (a**2)
+
+    ! Calculate alpha
+    ! Note: LOG is the natural logarithm for real and complex numbers in Fortran
+    alpha = (2.0 * m**2 * LOG(m**2)) / (m**2 - 1.0) - 2.0
+
+    ! Calculate sigma_denominator
+    ! CABS returns the magnitude of a complex number
+    sigma_denominator = (CABS(m**2 - 1.0))**2
+
+    ! Calculate sigma
+    ! AIMAG returns the imaginary part of a complex number
+    sigma = (6.0 * PI / (V * k_wavenumber**3)) * AIMAG(m**2) / sigma_denominator
+    
+    ! Calculate cde_cabs and cde_csca
+    cde_cabs = k_wavenumber * V * AIMAG(alpha)
+    cde_csca = k_wavenumber * V * AIMAG(alpha) / sigma
+    
+    ! Calculate efficiencies
+    cde_qsca = cde_csca / Ag
+    cde_qabs = cde_cabs / Ag
+    cde_qext = cde_qsca + cde_qabs
+    
+!    if (((2 * PI * a) / wavelength > 1)) then
+!        cde_qext = 2.0
+!        cde_qsca = cde_qext - cde_qabs
+!    endif
+    
+    ggsca=0.
+    qsca=cde_qsca
+    qext=cde_qext
+
+
+END SUBROUTINE CDE_efficiency
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 
     ! sets up Compton X-Sections and PDFs using the Klein Nishina formula
