@@ -1475,7 +1475,7 @@ module xSec_mod
              &ggCos(nSizes,nbins)
 
         complex :: refIndex
-        real    :: sizeParam
+        real    :: sizeParam, ggcostemp
 
         integer :: i, ai
 
@@ -1761,10 +1761,10 @@ SUBROUTINE CDE_efficiency(a, refIndex, wavelength, qext,qsca,ggsca)
     cde_qabs = cde_cabs / Ag
     cde_qext = cde_qsca + cde_qabs
     
-!    if (((2 * PI * a) / wavelength > 1)) then
-!        cde_qext = 2.0
-!        cde_qsca = cde_qext - cde_qabs
-!    endif
+    if (((2 * PI * a) / wavelength > 1)) then
+        cde_qext = 2.0
+        cde_qsca = cde_qext - cde_qabs
+    endif
     
     ggsca=0.
     qsca=cde_qsca
