@@ -1486,6 +1486,8 @@ module xSec_mod
            
            
            do ai = 1, nSizes
+           
+              if (grainRadius(ai) > amin .and. grainRadius(ai) < amax) then
                                
 		 ! size parameter
 		 sizeParam=2.0*3.14159265*grainRadius(ai)/( 2.9979250e14/(nuArray(i)*fr1Ryd) )
@@ -1506,6 +1508,14 @@ module xSec_mod
 		 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
 
 		 if (.not.lgDustScattering) Qsca(ai,i)=0.
+		 
+              else ! if grain size is outside the range for the given species set all to 0
+              
+                 Qabs(ai,i) = 0.
+                 Qsca(ai,i) = 0.
+                 ggCos(ai,i) = 0.
+                 
+              endif         
                  
            end do
 
