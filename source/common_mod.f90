@@ -312,6 +312,8 @@ module common_mod
         integer       :: iG        ! grid index
 
         real          :: nu
+        real          :: weight    ! weight to be used in path streching
+        
         logical       :: lgStellar
         logical       :: lgLine
 

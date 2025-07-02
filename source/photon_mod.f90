@@ -285,7 +285,7 @@ module photon_mod
         contains
 
 
-          subroutine energyPacketRun(chType, position, xP, yP, zP, gP, rR)
+          subroutine energyPacketRun(chType, position, xP, yP, zP, gP, reRun)
             implicit none
 
             type(vector),intent(inout) :: position         ! the position of the photon
@@ -295,7 +295,7 @@ module photon_mod
                                                                  ! 1= mother; 2=sub
 
 
-            integer, intent(inout) :: rR               ! rerun?
+            integer, intent(inout) :: reRun               ! rerun?
             integer, intent(inout) :: gP               ! grid index
             integer                          :: igpr             ! grid pointer 1= mother 2=sub
             integer                          :: difSourceL(3)    ! cell indeces
@@ -312,7 +312,6 @@ module photon_mod
 !               return
 !            end if
 
-            rR = 0
 
             if (gP==1) then
                igpr = 1
@@ -365,6 +364,14 @@ module photon_mod
                      &zP=zP, gP=gP, difSource = noCellLoc)
 
             end select
+            
+            if (reRun == 1) then 
+               enPacket%weight = enPacket%weight
+            else
+               enPacket%weight = 1.0
+            endif
+            
+            reRun = 0
 
             if (.not.lgDust .and. enPacket%nu < ionEdge(1) .and. .not.enPacket%lgLine) then
 
@@ -2791,7 +2798,9 @@ module photon_mod
       inY =  enPacket%yP(1:2)
       inZ =  enPacket%zP(1:2)
       gPIn = gP
+      
       reRun = 1
+      
       return
 
     end subroutine pathSegment
