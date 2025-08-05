@@ -9,7 +9,6 @@ from astropy import wcs
 from astropy.visualization import make_lupton_rgb
 import scipy.ndimage as ndimage
 from scipy.signal import savgol_filter, medfilt
-from pyevtk.hl import gridToVTK
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -146,6 +145,9 @@ arcsec_sz = 3600.*180./np.pi*np.arctan(Rout/(dist*3.086e18))
 sed = np.genfromtxt("output/SED.out",skip_header=4,skip_footer=4,dtype=None)
 sed[:,3:] = np.where(sed[:,3:] >= 1e-8, sed[:,3:], np.nan)
 
+sed_ori = np.genfromtxt("output/SED_CDE1000.out",skip_header=4,skip_footer=4,dtype=None)
+sed_ori[:,3:] = np.where(sed_ori[:,3:] >= 1e-8, sed_ori[:,3:], np.nan)
+
 ############################################################
 # Read ionization source file
 #%%
@@ -213,11 +215,12 @@ plt.xlabel('$\lambda$ (micron)')
 plt.ylabel(r'$F_{\nu}$ (Jy)')
 
 plt.plot(ion_source_wave, ion_source_flux, '--',label='Central source',color='C1',zorder=0)
-plt.plot(sed[:,1],sed[:,3]/(dist)**2,'C1',label='x axis SED',zorder=0,lw=2, alpha=0.5)
+#plt.plot(sed[:,1],sed[:,3]/(dist)**2,'C1',label='x axis SED',zorder=0,lw=2, alpha=0.5)
 
 plt.plot(sed[:,1]*u.micron, bb_flux, '--',label='Blackbody',color='C2',zorder=0)
 
 plt.plot(sed[:,1]*u.micron,sed[:,2]/ dist**2,'C0',label='avg. all angles',zorder=0,lw=2)
+plt.plot(sed_ori[:,1]*u.micron,sed_ori[:,2]/ dist**2,'C0:',label='Moc. Original',zorder=0,lw=2)
 
 
 plt.legend()
@@ -357,5 +360,9 @@ ax.set_title('Optical Depth from the Center to the Edge of the Nebula')
 ax.legend()
 plt.tight_layout()
 plt.savefig('figs/model_axisTau.png', dpi=300)
+
+
+
+
 
 plt.show()
