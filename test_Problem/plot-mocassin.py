@@ -145,8 +145,11 @@ arcsec_sz = 3600.*180./np.pi*np.arctan(Rout/(dist*3.086e18))
 sed = np.genfromtxt("output/SED.out",skip_header=4,skip_footer=4,dtype=None)
 sed[:,3:] = np.where(sed[:,3:] >= 1e-8, sed[:,3:], np.nan)
 
-sed_ori = np.genfromtxt("output/SED_CDE1000.out",skip_header=4,skip_footer=4,dtype=None)
+sed_ori = np.genfromtxt("output/SED_MIE1000.out",skip_header=4,skip_footer=4,dtype=None)
 sed_ori[:,3:] = np.where(sed_ori[:,3:] >= 1e-8, sed_ori[:,3:], np.nan)
+
+sed_cde = np.genfromtxt("output/SED_CDE1000.out",skip_header=4,skip_footer=4,dtype=None)
+sed_cde[:,3:] = np.where(sed_cde[:,3:] >= 1e-8, sed_cde[:,3:], np.nan)
 
 ############################################################
 # Read ionization source file
@@ -220,7 +223,8 @@ plt.plot(ion_source_wave, ion_source_flux, '--',label='Central source',color='C1
 plt.plot(sed[:,1]*u.micron, bb_flux, '--',label='Blackbody',color='C2',zorder=0)
 
 plt.plot(sed[:,1]*u.micron,sed[:,2]/ dist**2,'C0',label='avg. all angles',zorder=0,lw=2)
-plt.plot(sed_ori[:,1]*u.micron,sed_ori[:,2]/ dist**2,'C0:',label='Moc. Original',zorder=0,lw=2)
+plt.plot(sed_ori[:,1]*u.micron,sed_ori[:,2]/ dist**2,'C0:',label='Moc. Original',zorder=0,lw=1)
+plt.plot(sed_cde[:,1]*u.micron,sed_cde[:,2]/ dist**2,'C1--',label='Moc. CDE',zorder=1,lw=1)
 
 
 plt.legend()
