@@ -312,6 +312,11 @@ module photon_mod
 !               return
 !            end if
 
+!            if (reRun == 1) then 
+!               enPacket%weight = enPacket%weight
+!            else
+!               enPacket%weight = 1.0
+!            endif
 
             if (gP==1) then
                igpr = 1
@@ -364,13 +369,7 @@ module photon_mod
                      &zP=zP, gP=gP, difSource = noCellLoc)
 
             end select
-            
-            if (reRun == 1) then 
-               enPacket%weight = enPacket%weight
-            else
-               enPacket%weight = 1.0
-            endif
-            
+                        
             reRun = 0
 
             if (.not.lgDust .and. enPacket%nu < ionEdge(1) .and. .not.enPacket%lgLine) then
@@ -494,13 +493,14 @@ module photon_mod
 
 
         ! this function initializes a photon packet
-        function initPhotonPacket(nuP,  position, direction, lgLine, lgStellar, xP, yP, zP, gP, lgHg)
+        function initPhotonPacket(nuP,  position, direction, lgLine, lgStellar, xP, yP, zP, gP, lgHg, start_weight)
             implicit none
 
             type(photon_packet)      :: initPhotonPacket  ! the photon packet
 
             real                     :: random            ! random number
 
+            real, intent(in)         :: start_weight      ! starting weight of packet
             integer, intent(in)      :: nuP               ! the frequency of the photon packet
             integer, intent(in),dimension(2) :: xP, yP, &
                  & zP                                     ! indeces of position on the x, y and z axes
@@ -529,8 +529,8 @@ module photon_mod
 
 
             initPhotonPacket%position = position
-
             initPhotonPacket%iG  = gP
+            initPhotonPacket%weight  = start_weight
 
             if (gP==1) then
                igpi=1
@@ -858,8 +858,7 @@ module photon_mod
 
                 newPhotonPacket = initPhotonPacket(nuP, &
                      &starPosition(iStar), nullUnitVector,.false., .true., &
-                     & orX,orY,orZ, &
-                     & starIndeces(iStar,4), .false.)
+                     & orX,orY,orZ, starIndeces(iStar,4), .false., 1.0)
 
 
                 if (newPhotonPacket%nu>1.) then
@@ -901,12 +900,9 @@ module photon_mod
                    print*, chType, nuP, starPosition(iStar), .false., .true., orX,orY,orZ, gp
                    stop
                 end if
-!                newPhotonPacket = initPhotonPacket(nuP, positionLoc, .false., .false., orX,&
-!                     & orY, orZ, gP)
 
-                newPhotonPacket = initPhotonPacket(nuP, positionLoc, &
-                     & nullUnitVector,.false., .false., orX,&
-                     & orY, orZ, gP, .false.)
+                newPhotonPacket = initPhotonPacket(nuP, positionLoc,  nullUnitVector,.false., .false., orX,&
+                     & orY, orZ, gP, .false., 1.0)
 
 
             ! if the photon is diffuse
@@ -958,8 +954,8 @@ module photon_mod
 
 
                    newPhotonPacket = initPhotonPacket(nuP, position, &
-                        & nullUnitVector, .true., .false., xP, yP, zP, gP, .false.)
-!                   newPhotonPacket = initPhotonPacket(nuP, position, .true., .false., xP, yP, zP, gP)
+                        & nullUnitVector, .true., .false., xP, yP, zP, gP, .false., 1.0)
+
                 else
                     ! continuum photon
 
@@ -989,11 +985,8 @@ module photon_mod
                       stop
                    end if
 
-!                    newPhotonPacket = initPhotonPacket(nuP, position, .false., .false., xP, yP, zP, gP)
-
-
                     newPhotonPacket = initPhotonPacket(nuP, position, nullUnitVector,&
-                         & .false., .false., xP, yP, zP, gP, .false.)
+                         & .false., .false., xP, yP, zP, gP, .false., 1.0)
 
                 end if
 
@@ -1047,10 +1040,8 @@ module photon_mod
                       stop
                    end if
 
-!               newPhotonPacket = initPhotonPacket(nuP, position, .false., .false., xP, yP, zP, gP)
-
                newPhotonPacket = initPhotonPacket(nuP, position, nullUnitVector,&
-                    & .false., .false., xP, yP, zP, gP, .false.)
+                    & .false., .false., xP, yP, zP, gP, .false., 1.0)
 
 
 
@@ -1695,7 +1686,7 @@ module photon_mod
                       end if
 
                       enPacket = initPhotonPacket(enPacket%nuP, rVec, enPacket%direction, .false., .false., enPacket%xP(1:2), &
-                           & enPacket%yP(1:2), enPacket%zP(1:2), gP, .true.)
+                           & enPacket%yP(1:2), enPacket%zP(1:2), gP, .true., enPacket%weight)
 
                       if (.not.lgIsotropic .and. .not.enPacket%lgStellar) then
                          do ihg = 1,10
