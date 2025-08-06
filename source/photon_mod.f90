@@ -299,6 +299,7 @@ module photon_mod
             integer, intent(inout) :: gP               ! grid index
             integer                          :: igpr             ! grid pointer 1= mother 2=sub
             integer                          :: difSourceL(3)    ! cell indeces
+            real                             :: start_weight     ! start weight of the packet
 
             integer                          :: idirP, idirT     ! direction cosines
 
@@ -307,9 +308,9 @@ module photon_mod
             character(len=7), intent(inout)     :: chType           ! stellar or diffuse?
 
             if (reRun == 1) then 
-               enPacket%weight = enPacket%weight
+               start_weight = enPacket%weight
             else
-               enPacket%weight = 1.0
+               start_weight = 1.0
             endif
             
             !print*, reRun, chType, enPacket%weight
@@ -365,6 +366,8 @@ module photon_mod
                      &zP=zP, gP=gP, difSource = noCellLoc)
 
             end select
+            
+            enPacket%weight = start_weight
                         
             reRun = 0
 
