@@ -306,17 +306,13 @@ module photon_mod
 
             character(len=7), intent(inout)     :: chType           ! stellar or diffuse?
 
-!            countRecursive = countRecursive+1
-!            if (countRecursive > recursionLimit) then
-!               trapped = trapped+1
-!               return
-!            end if
-
-!            if (reRun == 1) then 
-!               enPacket%weight = enPacket%weight
-!            else
-!               enPacket%weight = 1.0
-!            endif
+            if (reRun == 1) then 
+               enPacket%weight = enPacket%weight
+            else
+               enPacket%weight = 1.0
+            endif
+            
+            !print*, reRun, chType, enPacket%weight
 
             if (gP==1) then
                igpr = 1
@@ -1055,6 +1051,113 @@ module photon_mod
 
         end function newPhotonPacket
 
+    subroutine calculate_pass_prob_and_weight(tauCell, initial_weight, passProb, weightFactor)
+        implicit none
+
+        ! Subroutine arguments
+        real, intent(in)  :: tauCell
+        real, intent(in)  :: initial_weight
+        real, intent(out) :: passProb
+        real, intent(out) :: weightFactor
+
+        ! Local variables
+        real :: tauMax
+        real :: random   ! To hold a random number [0, 1)
+        real :: compXi   ! Composite scheme parameter
+        real :: alpha    ! Constant for the composite distribution
+        real :: expval   ! precalc exp
+        REAL :: C        ! Normalization constant for g(x)
+        REAL :: G_alpha     ! Value of the CDF at the boundary x=20
+
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! original basic probability
+        call random_number(random)
+        passProb = -log(1.-random)
+        weightFactor = 1.0
+
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! Using modified exponential for strech part
+!        ! Define a constant for the composite distribution.
+!        alpha = 1.0 / (1.0 + tauCell)
+!        compXi = 1. ! Define the composite scheme parameter.
+!        ! Sample the optical depth from the composite distribution.
+!        if (random < compXi) then
+!           ! Sample from the exponential distribution part
+!           call random_number(random)
+!           passProb = -log(1.0 - random)
+!        else
+!          ! Sample from the modified exponential distribution part
+!          call random_number(random)
+!          passProb = -log(1.0 - random) / alpha
+!        endif
+!        ! Apply the weight correction based on the composite scheme formula.
+!        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
+         
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! Using uniform for strech part
+!        ! Define a constant for the composite distribution.
+!        alpha = 1.0 / (1.0 + tauCell)
+!        ! Sample the optical depth from the composite distribution.
+!        if (tauCell < 1.0) then
+!           ! Sample from the exponential distribution part
+!           call random_number(random)
+!           passProb = -log(1.0 - random)
+!           weightFactor = 1.0
+!        else
+!          ! Sample from uniform distribution part
+!          call random_number(random)
+!          !passProb = -log(1.0 - random) / alpha
+!          passProb = (-1.0 / alpha) * log(1.0d0 - random * (1.0 - EXP(-20.0 * alpha)))
+!          weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
+!          
+!        endif
+!        ! Apply the weight correction based on the composite scheme formula.
+!        !weightFactor = 1.0 / ( (1.0 - compXi) + compXi/exp(-passProb) )
+         
+
+
+
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! sample from piece wise function
+!        ! alpha defines boundary of uniform
+!        alpha = 1.0
+!        tauMax = max(20.0, tauCell*2)
+!        ! --- 1. Calculate the normalization constant C ---
+!        C = 1.0 / (1.0 + (tauMax - (alpha + 1.0)) * EXP(-alpha))
+!        ! --- 2. Calculate the CDF value at the boundary ---
+!        G_alpha = C * (1.0 - EXP(-alpha))
+!        
+!        ! --- 3. Generate a uniform random number ---
+!        CALL RANDOM_NUMBER(random)
+
+!        ! --- 4. Sample x using the Inverse Transform Method ---
+!        IF (random < G_alpha) THEN
+!            ! We are in the exponential part: 0 <= x < alpha
+!            ! Solve for x in: xi = C * (1 - exp(-x))
+!            passProb = -LOG(1.0 - random / C)
+!        ELSE
+!            ! We are in the constant part: alpha <= x < Xcut
+!            ! Solve for x in: xi = G_alpha + C * exp(-alpha) * (x - alpha)
+!            passProb = alpha + (random - G_alpha) / (C * EXP(-alpha))
+!        END IF
+
+!        ! --- 5. Calculate the Weight Factor W = f(x)/g(x) ---
+!        ! We assume the true (analog) PDF is f(x) = exp(-x).
+!        IF (passProb < alpha) THEN
+!            ! Here, g(x) = C * exp(-x)
+!            ! So, W = exp(-x) / (C * exp(-x)) = 1/C
+!            weightFactor = 1.0 / C
+!        ELSE
+!            ! Here, g(x) = C * exp(-alpha)
+!            ! So, W = exp(-x) / (C * exp(-alpha))
+!            weightFactor = EXP(-passProb + alpha) / C
+!        END IF
+        
+        
+    end subroutine calculate_pass_prob_and_weight
+
+
+
         subroutine pathSegment(enPacket)
           implicit none
 
@@ -1076,6 +1179,7 @@ module photon_mod
           real                            :: radius   ! radius
           real                            :: random   ! random number
           real                            :: tauCell  ! local tau
+          real                            :: weightFactor !updated packet weight
 
           integer                         :: iierr, ihg
           integer                         :: idirT,idirP ! direction cosine counters
@@ -1174,11 +1278,17 @@ module photon_mod
           ! initialize optical depth
           absTau = 0.
 
-          ! get a random number
-          call random_number(random)
+!          ! get a random number
+!          call random_number(random)
+!          ! calculate the probability
+!          passProb = -log(1.-random)
 
-          ! calculate the probability
-          passProb = -log(1.-random)
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+          ! Using new sampling subroutine
+          call calculate_pass_prob_and_weight(tauCell, enPacket%weight, passProb, weightFactor)
+          enPacket%weight = enPacket%weight * weightFactor
+          !print*, tauCell, passProb, weightFactor
+          !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
           ! speed up photons that my be trapped
           if (lgPlaneIonization) then
@@ -1713,11 +1823,16 @@ module photon_mod
                       ! initialize optical depth
                       absTau = 0.
 
-                      ! get a random number
-                      call random_number(random)
+!                      ! get a random number
+!                      call random_number(random)
+!                      ! calculate the probability
+!                      passProb = -log(1.-random)
 
-                      ! calculate the probability
-                      passProb = -log(1.-random)
+                      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                      ! Using new sampling subroutine
+                      call calculate_pass_prob_and_weight(tauCell, enPacket%weight, passProb, weightFactor)
+                      enPacket%weight = enPacket%weight * weightFactor
+                      !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
                    end if
 
