@@ -1072,11 +1072,18 @@ module photon_mod
         REAL :: C        ! Normalization constant for g(x)
         REAL :: G_alpha     ! Value of the CDF at the boundary x=20
 
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! original basic probability
+!        call random_number(random)
+!        passProb = -log(1.-random)
+!        weightFactor = 1.0
+
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! original basic probability
+        ! Probability considering path stretching with fixed alpha
         call random_number(random)
-        passProb = -log(1.-random)
-        weightFactor = 1.0
+        alpha = 0.1
+        passProb = -log(1.-random)/alpha
+        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Using modified exponential for strech part
