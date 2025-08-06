@@ -417,11 +417,11 @@ module photon_mod
 
                      grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                           &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                          & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                      grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                           & enPacket%nuP,0) = &
                           & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,0) +  deltaE(iStar)
+                          & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                   elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                        & (viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))) .or. &
@@ -429,18 +429,18 @@ module photon_mod
 
                      grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                           &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                          & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                      if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                           & enPacket%nuP,0) = &
                           & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,0) +  deltaE(iStar)
+                          & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                   else
 
                      grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                           & enPacket%nuP,0) = &
                           & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,0) +  deltaE(iStar)
+                          & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                   end if
 
@@ -458,7 +458,7 @@ module photon_mod
                   grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                        & enPacket%nuP,0) = &
                        & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                       & enPacket%nuP,0) +  deltaE(iStar)
+                       & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                end if
 
@@ -480,7 +480,7 @@ module photon_mod
                     & grid(gP)%linePackets(grid(gP)%active(enPacket%xP(igpr), &
                     & enPacket%yP(igpr), enPacket%zP(igpr)), enPacket%nuP) = &
                     & grid(gP)%linePackets(grid(gP)%active(enPacket%xP(igpr), &
-                    & enPacket%yP(igpr), enPacket%zP(igpr)), enPacket%nuP) +deltaE(iStar)
+                    & enPacket%yP(igpr), enPacket%zP(igpr)), enPacket%nuP) +deltaE(iStar) *(enPacket%weight)
 
 
             end if
@@ -1595,14 +1595,14 @@ module photon_mod
                 ! add contribution of the packet to the radiation field
                 if (enPacket%lgStellar) then
                    grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                        grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) / dV
+                        grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) *(enPacket%weight) / dV
                 else ! if the energy packet is diffuse
                    if (lgDebug) then
                       grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                           & grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) / dV
+                           & grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) *(enPacket%weight) / dV
                    else
                       grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                           & grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) / dV
+                           & grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dlLoc*deltaE(iStar) *(enPacket%weight) / dV
                    end if
                 end if
 
@@ -1667,34 +1667,34 @@ module photon_mod
                       if (viewPointPtheta(idirT) > 0 .and. viewPointPhi(viewPointPtheta(idirT)) < 0) then
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                               &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                              & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                               & enPacket%nuP,0) = &
                               & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,0) +  deltaE(iStar)
+                              & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                       elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                            & (viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))) .or. &
                            & (viewPointPhi(viewPointPtheta(idirT))==viewPointPhi(viewPointPphi(idirP))) ) then
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                               &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                              & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
                          if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                               & enPacket%nuP,0) = &
                               & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,0) +  deltaE(iStar)
+                              & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                       else
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                           & enPacket%nuP,0) = &
                           & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                          & enPacket%nuP,0) +  deltaE(iStar)
+                          & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                       end if
                    else
 
                       grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                            & enPacket%nuP,0) = &
                            & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                           & enPacket%nuP,0) +  deltaE(iStar)
+                           & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                    end if
 
@@ -1859,14 +1859,14 @@ module photon_mod
 
                 if (enPacket%lgStellar) then
                    grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                        grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) / dV
+                        grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) *(enPacket%weight) / dV
                 else ! if the energy packet is diffuse
                    if (lgDebug) then
                       grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                           & grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) / dV
+                           & grid(gP)%Jdif(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) *(enPacket%weight) / dV
                    else
                       grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) = &
-                           & grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) / dV
+                           & grid(gP)%Jste(grid(gP)%active(xP,yP,zP),enPacket%nuP) + dS*deltaE(iStar) *(enPacket%weight) / dV
                    end if
                 end if
 
@@ -2192,29 +2192,29 @@ module photon_mod
 
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                                  &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                                 & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  & enPacket%nuP,0) = &
                                  & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,0) +  deltaE(iStar)
+                                 & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                               & (viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))) .or. &
                               & (viewPointPhi(viewPointPtheta(idirT))==viewPointPhi(viewPointPphi(idirP))) ) then
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,&
                                  & viewPointPtheta(idirT)) =grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2),&
-                                 & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                                 & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
 
                             if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  &enPacket%nuP,0) = &
                                  & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,0) +  deltaE(iStar)
+                                 & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          else
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  & enPacket%nuP,0) = &
                                  & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,0) +  deltaE(iStar)
+                                 & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          end if
 
@@ -2223,7 +2223,7 @@ module photon_mod
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                               enPacket%nuP,0) = &
                               & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,0) +  deltaE(iStar)
+                              & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                       end if
 
                       return
@@ -2412,28 +2412,28 @@ module photon_mod
 
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                                  &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                                 & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  & enPacket%nuP,0) = &
                                  & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,0) +  deltaE(iStar)
+                                 & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                               & (viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))) .or. &
                               & (viewPointPhi(viewPointPtheta(idirT))==viewPointPhi(viewPointPphi(idirP))) ) then
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                                  &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                                 & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
                             if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  enPacket%nuP,0) = &
                                  & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                 & enPacket%nuP,0) +  deltaE(iStar)
+                                 & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          else
                             grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                  enPacket%nuP,0) = &
                              & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                             & enPacket%nuP,0) +  deltaE(iStar)
+                             & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                          end if
 
@@ -2442,7 +2442,7 @@ module photon_mod
                          grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                               enPacket%nuP,0) = &
                               & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                              & enPacket%nuP,0) +  deltaE(iStar)
+                              & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                       end if
 
@@ -2538,11 +2538,11 @@ module photon_mod
 
                            grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                                 &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                                & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                            grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                 & enPacket%nuP,0) = &
                                 & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,0) +  deltaE(iStar)
+                                & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 !print*, 'd1', enPacket%origin(1), enPacket%origin(2)
 
                         elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
@@ -2551,26 +2551,26 @@ module photon_mod
                            grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,&
                                 & viewPointPtheta(idirT)) = &
                                 &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                                & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
 !print*, 'd2'
                            if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                 enPacket%nuP,0) = &
                                 & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,0) +  deltaE(iStar)
+                                & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                         else
 
 !print*, 'd3'
                            grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                 enPacket%nuP,0) = &
                                 & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,0) +  deltaE(iStar)
+                                & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                         end if
                      else
 !print*, 'd4'
                         grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                              enPacket%nuP,0) = &
                              & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                             & enPacket%nuP,0) +  deltaE(iStar)
+                             & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                      end if
 
@@ -2665,11 +2665,11 @@ module photon_mod
 
                               grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                                    &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                   & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                                   & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                               grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                    & enPacket%nuP,0) = &
                                    & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                   & enPacket%nuP,0) +  deltaE(iStar)
+                                   & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                            elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                                 &(viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))).or. &
@@ -2677,23 +2677,23 @@ module photon_mod
                               grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,&
                                    & viewPointPtheta(idirT)) = &
                                    &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                   & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                                   & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
                               if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                    enPacket%nuP,0) = &
                                    & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                   & enPacket%nuP,0) +  deltaE(iStar)
+                                   & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                            else
                               grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                    enPacket%nuP,0) = &
                                    & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                   & enPacket%nuP,0) +  deltaE(iStar)
+                                   & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                            end if
                         else
 
                            grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                                 enPacket%nuP,0) = &
                                 & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                                & enPacket%nuP,0) +  deltaE(iStar)
+                                & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                         end if
 
@@ -2833,11 +2833,11 @@ module photon_mod
 
                   grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,viewPointPtheta(idirT)) = &
                        &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                       & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar)
+                       & enPacket%nuP,viewPointPtheta(idirT)) + deltaE(iStar) *(enPacket%weight)
                   grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                        & enPacket%nuP,0) = &
                        & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                       & enPacket%nuP,0) +  deltaE(iStar)
+                       & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
                elseif (viewPointPtheta(idirT) == viewPointPphi(idirP).or. &
                     & (viewPointTheta(viewPointPphi(idirP))==viewPointTheta(viewPointPtheta(idirT))) .or. &
@@ -2845,23 +2845,23 @@ module photon_mod
                   grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), enPacket%nuP,&
                        & viewPointPtheta(idirT)) = &
                        &grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                    & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar)
+                    & enPacket%nuP,viewPointPtheta(idirT)) +  deltaE(iStar) *(enPacket%weight)
                   if (viewPointPtheta(idirT)/=0) grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                        enPacket%nuP,0) = &
                        & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                       & enPacket%nuP,0) +  deltaE(iStar)
+                       & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                else
                   grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                        enPacket%nuP,0) = &
                        & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                       & enPacket%nuP,0) +  deltaE(iStar)
+                       & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
                end if
             else
 
                grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
                     enPacket%nuP,0) = &
                     & grid(enPacket%origin(1))%escapedPackets(enPacket%origin(2), &
-                    & enPacket%nuP,0) +  deltaE(iStar)
+                    & enPacket%nuP,0) +  deltaE(iStar) *(enPacket%weight)
 
             end if
 
