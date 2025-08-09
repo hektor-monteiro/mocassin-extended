@@ -11,9 +11,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import sys, os
 
-# add mocassin tools module
-sys.path.insert(0, 'mocassin_fit')
-from mocassin_tools import *
+# # add mocassin tools module
+# sys.path.insert(0, 'mocassin_fit')
+# from mocassin_tools import *
 
 #plt.close('all')
 ############################################################
@@ -132,51 +132,6 @@ ax[2].axis('off')
 ax[2].set_aspect(1)
 plt.tight_layout()
 plt.savefig('figs/AvgDust_T_spec_'+str(species)+'.png', dpi=300)
-
-levels=np.logspace(np.log10(Ndust[nx//2,:,:].max()*0.00001),np.log10(Ndust[nx//2,:,:].max()*0.99),50)
-
-plt.figure()
-plt.contourf(Z,X,Ndust[nx//2,:,:],levels=levels, norm=LogNorm())
-plt.colorbar()
-
-
-#%%
-
-im = render_view_fast(-ZZ[nx//2,:,:].flatten(), -YY[nx//2,:,:].flatten(), (avg_Tdust[nx//2,:,:]).flatten(), 
-                             dV[nx//2,:,:].flatten()*1e45, image_size=(2*nz,2*ny), 
-                             conserve_flux=False, per_volume=True)
-
-f,ax = plt.subplots(1,3,figsize=(17,4))
-p1 = ax[0].imshow(im, origin='lower')
-cb=f.colorbar(p1, ax=ax[0])
-cb.set_label('T dust (k)')
-ax[0].set_title('X axis cut')
-ax[0].axis('off')
-ax[0].set_aspect(1)
-p2 = ax[1].contourf(Z,X,avg_Tdust[:,ny//2,:],levels=levels)
-cb=f.colorbar(p2, ax=ax[1])
-cb.set_label('T dust (k)')
-ax[1].set_title('Y axis cut')
-ax[1].axis('off')
-ax[1].set_aspect(1)
-p3 = ax[2].contourf(X,Y,avg_Tdust[:,:,nz//2],levels=levels, norm=LogNorm())
-cb=f.colorbar(p3, ax=ax[2])
-cb.set_label('T dust (k)')
-ax[2].set_title('Z axis cut')
-ax[2].axis('off')
-ax[2].set_aspect(1)
-plt.tight_layout()
-plt.savefig('figs/AvgDust_T_spec_'+str(species)+'.png', dpi=300)
-
-#%%
-
-plt.figure()
-for i in range(1,21,2):
-    if (np.array(temps)[:,i,species].flatten().sum() > 0.):
-        print(i)
-        plt.scatter(Radius.flatten(), np.array(temps)[:,i,species].flatten(), s=1)
-    
-
 
 
 
