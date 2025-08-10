@@ -69,13 +69,10 @@ module emission_mod
            nspE = 1
         end if
 
-
         ! set the dust emission PDF
         if (lgDust .and. .not.lgGas) call setDustPDF()
 
         if (.not.lgGas) return
-
-
 
         ! find the physical properties of this cell
         ionDenUsed= grids(iG)%ionDen(cellPUsed, :, :)
@@ -108,13 +105,9 @@ module emission_mod
         ffCoeff1       = 0.
         ffCoeff2       = 0.
 
-
-
         ! calculates the H, He and heavy ions f-b and f-f emission
         ! coefficients
         call fb_ff()
-
-
 
         ! calculate two photon emission coefficients for HI, HeI and
         ! HeII
@@ -757,6 +750,12 @@ module emission_mod
         real                       :: T4          ! TeUsed/10000.
         real                       :: x1, x2
 
+        real, dimension(34) :: HeIRecLines_raw ! Temporary array to hold raw values
+        logical, parameter :: DEBUG_THIS_CELL = .true. ! Set to .false. to turn off
+
+        ! The index for 5876A 
+        integer, parameter :: I_5876 = 16
+
         T4 = TeUsed / 10000.
 
         ! copy HI data into array. this is where reading from file used to happen
@@ -803,6 +802,13 @@ module emission_mod
 
         ! now do HeI
 
+        ! Safeguard: Prevent T4 from being too small for the fitting formula
+        ! this means HeI lines will be wrong in these regions
+        ! this is a temp fix!!!!!!
+        if (TeUsed < 5000.) then
+           T4 = 5000.0 / 10000.
+        endif
+
         if (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 100.) then
            denint=0
         elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 100. .and. grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 1.e4) then
@@ -830,7 +836,39 @@ module emission_mod
               HeIRecLines(i) = HeIrecLineCoeff(i,3,1)*(T4**(HeIrecLineCoeff(i,3,2)))*exp(HeIrecLineCoeff(i,3,3)/T4)
            end do
         end if
+
+!	! ==========================================================
+!	! START: ADD DIAGNOSTIC PRINTS HERE
+!	! ==========================================================
+!	    BLOCK
+!		! Trigger the print statement only for the problematic cells
+!		if (DEBUG_THIS_CELL .and. TeUsed > 0.0 .and. TeUsed < 120.0 .and. grids(iG)%Hden(grids(iG)%active(ix,iy,iz)) > 10000.) then
+!		    HeIRecLines_raw = HeIRecLines ! Save the raw coefficients before scaling
+
+!		    ! The final scaling step that causes the issue
+!		    !HeIRecLines = HeIRecLines * NeUsed * grids(iG)%elemAbun(abFileUsed,2) * ionDenUsed(elementXref(2),2)
+!		    HeIRecLines=HeIRecLines*NeUsed*grids(iG)%elemAbun(grids(iG)%abFileIndex(ix,iy,iz),2)*ionDenUsed(elementXref(2),2)
+
+!		    ! Print all the components of the calculation
+!		    print *, '--- DEBUG He I Lines ---'
+!		    print *, 'Cell (ix,iy,iz): ', ix, iy, iz
+!		    print *, 'Te = ', TeUsed, ' K,  Ne = ', NeUsed, ' cm^-3, Hden = ', grids(iG)%Hden(grids(iG)%active(ix,iy,iz)), ' cm^-3'
+!		    print *, 'Te = ', T4, ' K', HeIrecLineCoeff(I_5876,1,1), T4**(HeIrecLineCoeff(I_5876,1,2)), exp(HeIrecLineCoeff(I_5876,1,3)/T4), x1, x2
+!		    print *, 'He+ Fraction [ionDenUsed(2,2)] = ', ionDenUsed(elementXref(2),2)
+!		    print *, 'Raw 5876A Coeff [HeIRecLines_raw(10)] = ', HeIRecLines_raw(I_5876)
+!		    print *, 'Final 5876A Emissivity = ', HeIRecLines(I_5876)
+!		    print *, '------------------------'
+
+!		    ! After printing, we must exit to avoid applying the scaling twice.
+!		    ! The scaling will be applied by the original line of code just after this block.
+!		end if
+!	    END BLOCK
+!	! ==========================================================
+!	! END OF DIAGNOSTIC BLOCK
+!	! ==========================================================
+
         HeIRecLines=HeIRecLines*NeUsed*grids(iG)%elemAbun(grids(iG)%abFileIndex(ix,iy,iz),2)*ionDenUsed(elementXref(2),2)
+        
     end subroutine RecLinesEmission
 
 

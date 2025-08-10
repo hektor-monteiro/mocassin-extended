@@ -368,6 +368,8 @@ module photon_mod
             end select
             
             enPacket%weight = start_weight
+            
+            !print*, reRun, chType, enPacket%weight
                         
             reRun = 0
 
@@ -1072,24 +1074,24 @@ module photon_mod
         REAL :: C        ! Normalization constant for g(x)
         REAL :: G_alpha     ! Value of the CDF at the boundary x=20
 
-!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!        ! original basic probability
-!        call random_number(random)
-!        passProb = -log(1.-random)
-!        weightFactor = 1.0
-
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! Probability considering path stretching with fixed alpha
+        ! original basic probability
         call random_number(random)
-        alpha = 0.1
-        passProb = -log(1.-random)/alpha
-        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
+        passProb = -log(1.-random)
+        weightFactor = 1.0
+
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! Probability considering path stretching with fixed alpha
+!        call random_number(random)
+!        alpha = 0.1
+!        passProb = -log(1.-random)/alpha
+!        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Using modified exponential for strech part
 !        ! Define a constant for the composite distribution.
 !        alpha = 1.0 / (1.0 + tauCell)
-!        compXi = 1. ! Define the composite scheme parameter.
+!        compXi = 0.2 ! Define the composite scheme parameter.
 !        ! Sample the optical depth from the composite distribution.
 !        if (random < compXi) then
 !           ! Sample from the exponential distribution part
@@ -1126,10 +1128,9 @@ module photon_mod
          
 
 
-
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! sample from piece wise function
-!        ! alpha defines boundary of uniform
+!        ! alpha here defines boundary of uniform
 !        alpha = 1.0
 !        tauMax = max(20.0, tauCell*2)
 !        ! --- 1. Calculate the normalization constant C ---
