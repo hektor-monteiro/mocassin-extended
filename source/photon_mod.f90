@@ -1074,36 +1074,36 @@ module photon_mod
         REAL :: C        ! Normalization constant for g(x)
         REAL :: G_alpha     ! Value of the CDF at the boundary x=20
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! original basic probability
-        call random_number(random)
-        passProb = -log(1.-random)
-        weightFactor = 1.0
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! original basic probability
+!        call random_number(random)
+!        passProb = -log(1.-random)
+!        weightFactor = 1.0
 
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Probability considering path stretching with fixed alpha
 !        call random_number(random)
-!        alpha = 0.1
+!        alpha = 0.1 !1.0 / (1.0 + tauCell)
 !        passProb = -log(1.-random)/alpha
 !        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
-!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!        ! Using modified exponential for strech part
-!        ! Define a constant for the composite distribution.
-!        alpha = 1.0 / (1.0 + tauCell)
-!        compXi = 0.2 ! Define the composite scheme parameter.
-!        ! Sample the optical depth from the composite distribution.
-!        if (random < compXi) then
-!           ! Sample from the exponential distribution part
-!           call random_number(random)
-!           passProb = -log(1.0 - random)
-!        else
-!          ! Sample from the modified exponential distribution part
-!          call random_number(random)
-!          passProb = -log(1.0 - random) / alpha
-!        endif
-!        ! Apply the weight correction based on the composite scheme formula.
-!        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! Using modified exponential for strech part
+        ! Define a constant for the composite distribution.
+        alpha = 1.0 / (1.0 + tauCell)
+        compXi = 0.2 ! Define the composite scheme parameter.
+        ! Sample the optical depth from the composite distribution.
+        if (random < compXi) then
+           ! Sample from the exponential distribution part
+           call random_number(random)
+           passProb = -log(1.0 - random)
+        else
+          ! Sample from the modified exponential distribution part
+          call random_number(random)
+          passProb = -log(1.0 - random) / alpha
+        endif
+        ! Apply the weight correction based on the composite scheme formula.
+        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
          
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Using uniform for strech part
@@ -1288,6 +1288,9 @@ module photon_mod
 
           ! initialize optical depth
           absTau = 0.
+
+          ! calculate the optical depth to the next cell wall
+          tauCell = R_out*grid(gP)%opacity(grid(gP)%active(xP,yP,zP), enPacket%nuP)
 
 !          ! get a random number
 !          call random_number(random)
@@ -1722,6 +1725,12 @@ module photon_mod
                    call random_number(random)
 
                    random = 1.-random
+                   
+                   ! force first event to be scattering
+                   if (i ==1) then
+                      random = probSca
+                      enPacket%weight = enPacket%weight * probSca
+                   endif
 
                    if (random > probSca) then
                       lgScattered = .false.

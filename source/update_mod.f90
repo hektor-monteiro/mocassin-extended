@@ -79,8 +79,8 @@ module update_mod
         integer                        :: nspU
         integer, parameter             ::  nTbins=300  ! number of enthalpy bins for T spike
         integer, parameter             :: maxIterateGC = 100 ! limit to number of grain charge it
-        integer, parameter             :: maxIterateX = 100 ! limit to number of X-iterat ions
-        integer, parameter             :: maxIterateT = 200 ! limit to number of T-iterations
+        integer, parameter             :: maxIterateX = 50 ! limit to number of X-iterat ions
+        integer, parameter             :: maxIterateT = 50 ! limit to number of T-iterations
 
 
         ! check whether this cell is outside the nebula
@@ -452,9 +452,11 @@ module update_mod
 !                        end if
 !                    end if
 
-!                    if (TeUsed <= 0.) TeUsed = 1.
+!                    if (TeUsed <= 20.) TeUsed = 20.
 
 !                    ! next T-iteration
+!                    if (cellP == 9249) print*, nIterateT, TeUsed, '[', Tlow, Thigh, ']', (thResidual), thLimit * heatInt
+
 !                    call iterateT()
 !                    return
 
@@ -525,7 +527,7 @@ module update_mod
 
 !        end subroutine iterateT
 !        
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 subroutine iterateT()
@@ -589,11 +591,14 @@ subroutine iterateT()
                     if (grainRadius(ai) >= componentMinRadius(nspU, isp) .and. grainRadius(ai) <= componentMaxRadius(nspU, isp)) then
                         
                         ! Calculate the grain's electric potential (charge)
-                        nIterateGC = 0
-                        ispbig = isp + dustComPoint(nspU) - 1
-                        call setGrainPotential(ispbig, ai, lgGCBConv)
-                        call locate(nuArray, grainPot(isp, ai), grainPotP(isp, ai))
-                        if (grainPotP(isp, ai) == 0) grainPotP = 1
+                        nIterateGC     = 0
+                        grainEmi       = 0.
+                        grainRec       = 0.                     
+
+                        ispbig = isp+dustComPoint(nspU)-1
+                        call setGrainPotential(ispbig,ai,lgGCBConv)
+                        call locate(nuArray, grainPot(isp,ai), grainPotP(isp,ai))
+                        if (grainPotP(isp,ai) == 0) grainPotP = 1
 
                     endif
                 end do
@@ -649,7 +654,7 @@ subroutine iterateT()
         ! If the temperature bounds get very close but don't converge,
         ! nudge the temperature to break out of the stall.
         if (nIterateT >= 6) then
-            if (abs(Thigh - Tlow) <= (0.002 * (Thigh + Tlow))) then
+            if (abs(Thigh - Tlow) <= (0.002*(Thigh+Tlow))) then
                 if (thResidual < 0.0) then
                     TeUsed = Tlow + 100. ! Nudge up from the lower bound
                     Tlow = 0.0          ! Reset the bracket
@@ -661,7 +666,7 @@ subroutine iterateT()
         end if
 
         ! Ensure temperature doesn't become non-physical
-        if (TeUsed <= 0.0) TeUsed = 1.0
+        if (TeUsed < 10.) TeUsed = 10.
         
         if (cellP == 9249) print*, nIterateT, TeUsed, '[', Tlow, Thigh, ']', (thResidual), thLimit * heatInt
 
@@ -691,7 +696,9 @@ subroutine iterateT()
         grid%noTeBal = grid%noTeBal + 1
         grid%lgBlack(cellP) = 1 ! Flag this cell as problematic
     end if
-
+    
+!    if (TeUsed < 4000.) grid%lgBlack(cellP) = 1 ! Flag this cell as problematic
+    
     ! --- Update grid values and check overall model convergence ---
     grid%Te(cellP) = TeUsed
     
@@ -715,13 +722,11 @@ subroutine iterateT()
     ! This was added to help implementing MPI communication
     TeTemp(cellP) = TeUsed
     
-    !print*, nIterateT, cellP, grid%Hden(cellP), TeUsed, '[', Tlow, Thigh, ']', (thResidual), thLimit * heatInt
+    if (cellP == 9249) print*, nIterateT, TeUsed, '[', Tlow, Thigh, ']', (thResidual), thLimit * heatInt
 
 
 end subroutine iterateT
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         recursive subroutine setGrainPotential(iSp, ai, lgGCBConv)
           implicit none
@@ -1517,389 +1522,79 @@ end subroutine iterateT
 
         end subroutine forLines
 
-!        recursive subroutine ionBalance(lgConv)
-!            implicit none
+        recursive subroutine ionBalance(lgConv)
+            implicit none
 
-!            logical, intent(out)   :: lgConv        ! did ion bal converge?
+            logical, intent(out)   :: lgConv        ! did ion bal converge?
 
-!            ! local variables
-!            real                   :: collIon       ! collisional ionization of H
-!            real                   :: correction    ! used in lgNeInput = .t.
-!            real                   :: deltaHI       ! delta(X(H0))
-!            real                   :: deltaHeI      ! delta(X(He0))
-!            real                   :: deltaHeII     ! delta(X(HeII))
-!            real                   :: expFact       ! exponential factor
-!            real                   :: t4            ! TeUsed/10000.
-!            real, save             :: HIOld         ! X(H0) from last iteration
-!            real, save             :: HeIOld        ! X(He0) from last iteration
-!            real, save             :: HeIIOld       ! X(He+) from last iteration
-!            real, parameter        :: limit = 0.01  ! convergence limit
+            ! local variables
+            real                   :: collIon       ! collisional ionization of H
+            real                   :: correction    ! used in lgNeInput = .t.
+            real                   :: deltaHI       ! delta(X(H0))
+            real                   :: deltaHeI      ! delta(X(He0))
+            real                   :: deltaHeII     ! delta(X(HeII))
+            real                   :: expFact       ! exponential factor
+            real                   :: t4            ! TeUsed/10000.
+            real, save             :: HIOld         ! X(H0) from last iteration
+            real, save             :: HeIOld        ! X(He0) from last iteration
+            real, save             :: HeIIOld       ! X(He+) from last iteration
+            real, parameter        :: limit = 0.01  ! convergence limit
 
-!            integer                :: elem, ion     ! element and ion counters
-!            integer                :: g0,g1         ! stat weights
-!            integer                :: i             ! counter
-!            integer                :: nElec         ! of  e's in the ion
-!            integer                :: outShell      ! byproduct of proc to get stat weights
+            integer                :: elem, ion     ! element and ion counters
+            integer                :: g0,g1         ! stat weights
+            integer                :: i             ! counter
+            integer                :: nElec         ! of  e's in the ion
+            integer                :: outShell      ! byproduct of proc to get stat weights
 
 
-!            real                   :: revRate       ! reverse charge exchange rate
+            real                   :: revRate       ! reverse charge exchange rate
 
-!            double precision, dimension(nELements) :: &
-!                 & denominator   ! denominator of final ion abundance
+            double precision, dimension(nELements) :: &
+                 & denominator   ! denominator of final ion abundance
 
 
-!            real, dimension(nElements, nstages) :: &
-!                 & deltaE_k      ! deltaE/k [K]
+            real, dimension(nElements, nstages) :: &
+                 & deltaE_k      ! deltaE/k [K]
 
-!            double precision, dimension(nElements, nstages) :: &
-!                 & ionRatio, &   ! X(i+1)/X(+i)
-!                 & ionProd       ! ionRatio products
-!            real, dimension(nElements, nstages,4) :: &
-!                 & chex         ! ch exchange coeff in cm^3/s
+            double precision, dimension(nElements, nstages) :: &
+                 & ionRatio, &   ! X(i+1)/X(+i)
+                 & ionProd       ! ionRatio products
+            real, dimension(nElements, nstages,4) :: &
+                 & chex         ! ch exchange coeff in cm^3/s
 
 
-!            ! initialize variables
-!            correction  = 0.
-!            ionRatio    = 0.
-!            ionProd     = 1.
-!            denominator = 1.
-!            lgConv      = .true.
-
-!            ! take into account collisional ionization of H
-!            ! Drake & Ulrich, ApJS42(1980)351
-!            expFact = 157893.94/TeUsed
-
-!            if (expFact > 75.) then
-!                ! prevents underflow of exponential factor in collIon
-!                expFact = 75.
-!            end if
-
-!            collIon = 2.75E-16*TeUsed*sqrt(TeUsed)*&
-!                 & (157893.94/TeUsed+2.)*exp(-expFact)
-
-
-!            ! get HIOld, HeIOld, HeIIOld from last iteration
-!            HIOld   = ionDenUsed(elementXref(1),1)
-!            HeIOld  = ionDenUSed(elementXref(2),1)
-!            HeIIOld = ionDenUsed(elementXref(2),2)
-
-!            ! the set of charge exchange coeffs is not complete; the following might need
-!            ! to be changed when a more complete set is available
-
-
-
-!            chex          = 0.
-!            deltaE_k      = 0.
-
-!            chex(2,1,:)  = (/7.47e-6, 2.06, 9.93,-3.89/)! He0
-!            chex(2,2,:)  = (/1.e-5  , 0.  , 0.  , 0./)  ! He+
-!            chex(3,2,:)  = (/1.26   , 0.96,3.02 ,-0.65/)! Li+
-!            chex(3,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Li+2
-!            chex(4,2,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Be+
-!            chex(4,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Be+2
-!            chex(4,4,:)  = (/5.17   , 0.82, -.69, -1.12 /)! Be+3
-!            chex(5,2,:)  = (/2.e-2  , 0.  , 0.  , 0. /) ! B+
-!            chex(5,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! B+2
-!            chex(5,4,:)  = (/5.27e-1, 0.76,-0.63,-1.17/)! B+3
-!            chex(6,1,:)  = (/1.76e-9, 8.33, 4278.78, -6.41/)! C0
-!            chex(6,2,:)  = (/1.67e-4, 2.79, 304.72, -4.07/)! C+
-!            chex(6,3,:)  = (/3.25   , 0.21, 0.19, -3.29/)! C+2
-!            chex(6,4,:)  = (/332.46 ,-0.11,-0.995,-1.58e-3/)! C+3
-!            chex(7,1,:)  = (/1.01e-3,-0.29,-0.92, -8.38/)! N0
-!            chex(7,2,:)  = (/3.05e-1, 0.60, 2.65, -0.93/)! N+
-!            chex(7,3,:)  = (/4.54   , 0.57,-0.65, -0.89/)! N2+
-!            chex(7,4,:)  = (/3.28   , 0.52,-0.52, -0.19/)! N3+
-!            chex(8,1,:)  = (/1.04   , 3.15e-2, -0.61, -9.73/)! O0
-!            chex(8,2,:)  = (/1.04   , 0.27, 2.02, -5.92/)! O+
-!            chex(8,3,:)  = (/3.98   , 0.26, 0.56, -2.62/)! O2+
-!            chex(8,4,:)  = (/2.52e-1, 0.63, 2.08, -4.16/)! O3+
-!            chex(9,2,:)  = (/1.e-5  , 0.  , 0.  , 0./) ! F+
-!            chex(9,3,:)  = (/9.86   , 0.29,-0.21,-1.15/) ! F+2
-!            chex(9,4,:)  = (/7.15e-1, 1.21,-0.70,-0.85/) ! F3+
-!            chex(10,2,:) = (/1.e-5  , 0.  , 0.  , 0.  /) ! Ne+
-!            chex(10,3,:) = (/14.73  , 4.52e-2, -0.84, -0.31 /) ! Ne+2
-!            chex(10,4,:) = (/6.47   , 0.54 , 3.59 , -5.22 /) ! Ne+3
-!            chex(11,2,:) = (/1.e-5  , 0.   , 0.   , 0. /) ! Na+
-!            chex(11,3,:) = (/1.33   , 1.15 , 1.20 , -0.32 /)! Na+2
-!            chex(11,4,:) = (/1.01e-1, 1.34 , 10.05, -6.41 /)! Na+3
-!            chex(12,2,:) = (/8.58e-5, 2.49e-3, 2.93e-2, -4.33 /)! Mg+
-!            chex(12,3,:) = (/6.49   , 0.53 , 2.82, -7.63 /) ! Mg+2
-!            chex(12,4,:) = (/6.36   , 0.55 , 3.86, -5.19 /) ! Mg+3
-!            chex(13,2,:) = (/1.e-5  , 0.   , 0.  , 0./) ! Al+
-!            chex(13,3,:) = (/7.11e-5, 4.12 , 1.72e4, -22.24/)! Al+2
-!            chex(13,4,:) = (/7.52e-1, 0.77 , 6.24, -5.67/) ! Al+3
-!            chex(14,2,:) = (/1.23   , 0.24 , 3.17, 4.18e-3/) ! Si+
-!            chex(14,3,:) = (/4.900e-1, -8.74e-2, -0.36, -0.79/)! Si+2
-!            chex(14,4,:) = (/7.58   , 0.37 , 1.06, -4.09/)! Si+3
-!            chex(16,1,:) = (/3.82e-7, 11.10, 2.57e4, -8.22/)! S0
-!            chex(16,2,:) = (/1.e-5  , 0.   , 0.   ,0. /)! S+
-!            chex(16,3,:) = (/2.29   , 4.02e-2, 1.59, -6.06/)! S+2
-!            chex(16,4,:) = (/6.44   , 0.13 , 2.69 , -5.69/)! S+3
-!            chex(18,2,:) = (/1.e-5  , 0.   , 0.    , 0./) ! Ar+
-!            chex(18,3,:) = (/4.57   , 0.27 , -0.18 , -1.57/)! Ar+2
-!            chex(18,4,:) = (/6.37   , 2.12 , 10.21 , -6.22/)! Ar+3
-!            chex(18,3,:) = (/3.17e-2, 2.12 , 12.06 , -0.40/)! Ca+2
-!            chex(18,4,:) = (/2.68   , 0.69 , -0.68 , -4.47/)! Ca+3
-!            chex(26,2,:) = (/1.26   , 7.72e-2, -0.41, -7.31/)! Fe+
-!            chex(26,3,:) = (/3.42   , 0.51 , -2.06 , -8.99/)! Fe+2.
-
-
-!            deltaE_k(7,1) = 10863.
-!            deltaE_k(8,1) = 2205.
-
-!            chex(:,:,1) = chex(:,:,1)*1.e-9
-
-
-!            t4 = TeUsed/10000.
-
-
-!            ! calculate the X(i+1)/X(i) ratio
-!            do elem = 1, nElements
-!                do ion = 1, min(elem, nstages-1)
-!                    if (.not.lgElementOn(elem)) exit
-
-!                    chex(elem,ion,1) = chex(elem,ion,1)*(t4**chex(elem,ion,2))*&
-!                         & (1.+chex(elem,ion,3)*exp(chex(elem,ion,4)*t4))
-
-!                    if (chex(elem,ion,1) < 0. ) chex(elem,ion,1) = 0.
-!                    if (TeUsed < 6000. .or. TeUsed>5.e4) chex(elem,ion,1) = 0.
-
-!                    ! find the number of electron in this ion
-!                    nElec = elem - ion +1
-
-!                    ! find the stat weights
-!                    call getOuterShell(elem, nElec, outShell, g0, g1)
-
-!                    ! calculate the reverse charge exchange rate (only if deltaE_k > 1.)
-!                    if ( deltaE_k(elem,ion) > 1.) then
-
-!                       revRate = chex(elem,ion,1) * &
-!                            & (1.-grid%ionDen(cellP, &
-!                            & elementXref(1),1))*grid%Hden(cellP)*&
-!                            & 2. * exp(-deltaE_k(elem,ion)/TeUsed)/(real(g0)/real(g1))
-!                    else
-!                       revRate = 0.
-!                    end if
-
-!                    if ( (elem>1) .or. (ion>1) ) collIon = 0.
-
-!                    ! calculate the X(i+1)/X(i) ratio
-!                    if (lgDebug) then
-!                       ionRatio(elem,ion) = (nPhotoSte(elem,ion)+nPhotoDif(elem,ion)+&
-!                            & collIon+revRate)/&
-!                            & (NeUsed*alphaTot(elem,ion)&
-!                            & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
-!                            & grid%ionDen(cellP,elementXref(1),1))
-!                    else
-!                       ionRatio(elem,ion) = (nPhotoSte(elem,ion)+&
-!                            & collIon+revRate)/&
-!                            & (NeUsed*alphaTot(elem,ion)&
-!                            & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
-!                            & grid%ionDen(cellP,elementXref(1),1))
-
-!                    end if
-!                 end do
-!              end do
-
-!            ! calculate the products of ionRatio
-!            do elem = 1, nElements
-!                do ion = 1, min(elem, nstages-1)
-!                   if (.not.lgElementOn(elem)) exit
-
-!                   ! generate the product
-!                   do i = 1, ion
-!                       ionProd(elem, ion) = ionProd(elem,ion)*ionRatio(elem, i)
-
-!                   end do
-
-!                end do
-!            end do
-
-!            ! calculate denominators for final ion abundances
-!            do elem = 1, nElements
-!                do ion = 1, min(elem, nstages-1)
-!                    if (.not.lgElementOn(elem)) exit
-
-!                    denominator(elem) = denominator(elem) + ionProd(elem, ion)
-
-!               end do
-!            end do
-
-
-!            ! calculate the new abundances for all ions
-!            do elem = 1, nElements
-!                do ion = 1, min(elem+1, nstages)
-
-!                    if (.not.lgElementOn(elem)) exit
-
-
-!                    if (ion == 1) then
-!                        grid%ionDen(cellP,elementXref(elem),ion) = real(1.0/denominator(elem))
-!                    else
-
-!                        grid%ionDen(cellP,elementXref(elem),ion) = &
-!                             & real(ionProd(elem, ion-1)/denominator(elem))
-
-!                   end if
-
-!                   ! take back within the limit
-!                   if (grid%ionDen(cellP,elementXref(elem),ion) > xMax) &
-!                        & grid%ionDen(cellP,elementXref(elem),ion) = xMax
-!                   if (grid%ionDen(cellP,elementXref(elem),ion) < 1.e-20) &
-!                        & grid%ionDen(cellP,elementXref(elem),ion) = 1.e-20
-
-
-!                   ionDenUsed(elementXref(elem), ion) = &
-!                        & grid%ionDen(cellP,elementXref(elem),ion)
-!                   ! this was added to help MPI communication
-!                   ionDenTemp(cellP,elementXref(elem),ion) = &
-!                        & grid%ionDen(cellP,elementXref(elem),ion)
-
-
-!                end do
-!            end do
-
-!            ! calculate new Ne
-!          NeUsed = 0.
-!            do elem = 1, nElements
-!                do ion = 2, min(elem+1, nstages)
-!                    if (lgElementOn(elem)) then
-!                      if( ionDenUsed(elementXref(elem),ion) >= 1.e-10) &
-!                           & NeUsed = NeUsed + (ion-1)*&
-!                           &grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
-!                           &ionDenUsed(elementXref(elem), ion)
-!                    end if
-
-!                end do
-!            end do
-
-!            NeUsed = NeUsed * grid%Hden(cellP)
-
-!            if (NeUsed==0. .and.lgTalk) print*, '! ionBalance [warning]: cell ', xP,yP,zP, &
-!                 &'; NeUsed = ',  NeUsed
-
-!            if (NeUsed == 0.) then
-!               NeUsed = 1.
-!            end if
-
-!            if (LgNeInput) then
-!               correction = NeUsed/grid%NeInput(cellP)
-!               grid%Hden(cellP) = grid%Hden(cellP)/correction
-!            end if
-
-!            ! this was added to help MPI implementation
-!            NeTemp(cellP) = NeUsed
-
-!            grid%Ne(cellP) = NeUsed
-
-
-!            ! calculate the residuals
-!            deltaHI   = (ionDenUsed(elementXref(1),1) - HIOld)   / HIOld
-!            deltaHeI  = (ionDenUsed(elementXref(2),1) - HeIOld)  / HeIOld
-!            deltaHeII = (ionDenUsed(elementXref(2),2) - HeIIOld) / HeIIOld
-
-!            ! check for convergence
-!            if ( ( (abs(deltaHI)>limit) .or. (abs(deltaHeI)>limit) .or. &
-!                 &(abs(deltaHeII)>limit) ) .and. (nIterateX<maxIterateX) ) then
-
-!                ! stepa up X iteration
-!                nIterateX = nIterateX + 1
-!                call ionBalance(lgConv)
-!                return
-
-!            else if (( (abs(deltaHI)>limit) .or. (abs(deltaHeI)>limit) .or. &
-!                 &(abs(deltaHeII)>limit) ) .and. (nIterateX == maxIterateX) ) then
-
-!               if (lgTalk)  print*, "! ionBalance: [warning] convergence not reached after ", &
-!                    &maxIterateX, " steps. Finishing up..."
-
-!                lgConv = .false.
-!            end if
-
-!            ! this was added to help MPI implementation
-!            NeTemp(cellP) = NeUsed
-
-!        end subroutine ionBalance
-        
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-subroutine ionBalance(lgConv)
-        implicit none
-
-        logical, intent(out)  :: lgConv      ! did ion bal converge?
-
-        ! local variables
-        real                  :: collIon     ! collisional ionization
-        real                  :: collIonH     ! collisional ionization of H
-        real                  :: correction  ! used in lgNeInput = .t.
-        real                  :: deltaHI     ! delta(X(H0))
-        real                  :: deltaHeI    ! delta(X(He0))
-        real                  :: deltaHeII   ! delta(X(HeII))
-        real                  :: expFact     ! exponential factor
-        real                  :: t4          ! TeUsed/10000.
-        real                  :: HIOld       ! X(H0) from last iteration
-        real                  :: HeIOld      ! X(He0) from last iteration
-        real                  :: HeIIOld     ! X(He+) from last iteration
-        real, parameter       :: limit = 0.01 ! convergence limit
-
-        integer               :: elem, ion   ! element and ion counters
-        integer               :: g0,g1       ! stat weights
-        integer               :: i           ! counter
-        integer               :: nElec       ! of e's in the ion
-        integer               :: outShell    ! byproduct of proc to get stat weights
-        integer               :: nIterateX   ! iteration counter
-
-        real                  :: revRate     ! reverse charge exchange rate
-
-        double precision, dimension(nELements) :: &
-             & denominator    ! denominator of final ion abundance
-
-        real, dimension(nElements, nstages) :: &
-             & deltaE_k       ! deltaE/k [K]
-
-        double precision, dimension(nElements, nstages) :: &
-             & ionRatio, &    ! X(i+1)/X(+i)
-             & ionProd        ! ionRatio products
-        real, dimension(nElements, nstages,4) :: &
-             & chex           ! ch exchange coeff in cm^3/s
-
-
-        !================================================================!
-        ! START OF THE MAIN ITERATIVE LOOP                             
-        ! This loop replaces the original recursive structure. It will 
-        ! continue until the ionic fractions converge or the maximum 
-        ! number of iterations is reached.
-        !================================================================!
-        nIterateX = 0 ! Initialize iteration counter
-        lgConv    = .false.
-
-        DO
-            ! initialize variables for the current iteration
+            ! initialize variables
             correction  = 0.
             ionRatio    = 0.
             ionProd     = 1.
             denominator = 1.
+            lgConv      = .true.
 
-            ! Store the ion densities from the previous step to check for convergence later.
-            HIOld   = ionDenUsed(elementXref(1),1)
-            HeIOld  = ionDenUsed(elementXref(2),1)
-            HeIIOld = ionDenUsed(elementXref(2),2)
-            
             ! take into account collisional ionization of H
             ! Drake & Ulrich, ApJS42(1980)351
             expFact = 157893.94/TeUsed
+
             if (expFact > 75.) then
-                ! prevents underflow of exponential factor in collIonH
+                ! prevents underflow of exponential factor in collIon
                 expFact = 75.
             end if
+
             collIon = 2.75E-16*TeUsed*sqrt(TeUsed)*&
-                    & (157893.94/TeUsed+2.)*exp(-expFact)
+                 & (157893.94/TeUsed+2.)*exp(-expFact)
 
 
-            ! Initialize charge exchange coefficients.
-            ! The set of charge exchange coeffs is not complete; the following might need
+            ! get HIOld, HeIOld, HeIIOld from last iteration
+            HIOld   = ionDenUsed(elementXref(1),1)
+            HeIOld  = ionDenUSed(elementXref(2),1)
+            HeIIOld = ionDenUsed(elementXref(2),2)
+
+            ! the set of charge exchange coeffs is not complete; the following might need
             ! to be changed when a more complete set is available
-            chex      = 0.
-            deltaE_k  = 0.
+
+
+
+            chex          = 0.
+            deltaE_k      = 0.
 
             chex(2,1,:)  = (/7.47e-6, 2.06, 9.93,-3.89/)! He0
             chex(2,2,:)  = (/1.e-5  , 0.  , 0.  , 0./)  ! He+
@@ -1929,7 +1624,7 @@ subroutine ionBalance(lgConv)
             chex(10,2,:) = (/1.e-5  , 0.  , 0.  , 0.  /) ! Ne+
             chex(10,3,:) = (/14.73  , 4.52e-2, -0.84, -0.31 /) ! Ne+2
             chex(10,4,:) = (/6.47   , 0.54 , 3.59 , -5.22 /) ! Ne+3
-            chex(11,2,:) = (/1.e-5  , 0.   , 0.  , 0. /) ! Na+
+            chex(11,2,:) = (/1.e-5  , 0.   , 0.   , 0. /) ! Na+
             chex(11,3,:) = (/1.33   , 1.15 , 1.20 , -0.32 /)! Na+2
             chex(11,4,:) = (/1.01e-1, 1.34 , 10.05, -6.41 /)! Na+3
             chex(12,2,:) = (/8.58e-5, 2.49e-3, 2.93e-2, -4.33 /)! Mg+
@@ -1942,121 +1637,135 @@ subroutine ionBalance(lgConv)
             chex(14,3,:) = (/4.900e-1, -8.74e-2, -0.36, -0.79/)! Si+2
             chex(14,4,:) = (/7.58   , 0.37 , 1.06, -4.09/)! Si+3
             chex(16,1,:) = (/3.82e-7, 11.10, 2.57e4, -8.22/)! S0
-            chex(16,2,:) = (/1.e-5  , 0.   , 0.  ,0. /)! S+
+            chex(16,2,:) = (/1.e-5  , 0.   , 0.   ,0. /)! S+
             chex(16,3,:) = (/2.29   , 4.02e-2, 1.59, -6.06/)! S+2
             chex(16,4,:) = (/6.44   , 0.13 , 2.69 , -5.69/)! S+3
-            chex(18,2,:) = (/1.e-5  , 0.   , 0.  , 0./) ! Ar+
+            chex(18,2,:) = (/1.e-5  , 0.   , 0.    , 0./) ! Ar+
             chex(18,3,:) = (/4.57   , 0.27 , -0.18 , -1.57/)! Ar+2
             chex(18,4,:) = (/6.37   , 2.12 , 10.21 , -6.22/)! Ar+3
-            
-            ! BUG NOTE: The following lines for Ca use index 18 (Argon), overwriting the Argon values.
-            ! The index should likely be 20 for Calcium.
             chex(20,3,:) = (/3.17e-2, 2.12 , 12.06 , -0.40/)! Ca+2
             chex(20,4,:) = (/2.68   , 0.69 , -0.68 , -4.47/)! Ca+3
-
             chex(26,2,:) = (/1.26   , 7.72e-2, -0.41, -7.31/)! Fe+
             chex(26,3,:) = (/3.42   , 0.51 , -2.06 , -8.99/)! Fe+2.
+
 
             deltaE_k(7,1) = 10863.
             deltaE_k(8,1) = 2205.
 
             chex(:,:,1) = chex(:,:,1)*1.e-9
+
+
             t4 = TeUsed/10000.
 
-            ! Calculate the ion ratio X(i+1)/X(i) for each species.
-            ! This is the core of the ionization balance, where the ratio of
-            ! ionization rates to recombination rates is computed.
+
+            ! calculate the X(i+1)/X(i) ratio
             do elem = 1, nElements
                 do ion = 1, min(elem, nstages-1)
                     if (.not.lgElementOn(elem)) exit
 
-                    ! Calculate temperature-dependent charge exchange rate
                     chex(elem,ion,1) = chex(elem,ion,1)*(t4**chex(elem,ion,2))*&
-                                     & (1.+chex(elem,ion,3)*exp(chex(elem,ion,4)*t4))
+                         & (1.+chex(elem,ion,3)*exp(chex(elem,ion,4)*t4))
 
                     if (chex(elem,ion,1) < 0. ) chex(elem,ion,1) = 0.
                     if (TeUsed < 6000. .or. TeUsed>5.e4) chex(elem,ion,1) = 0.
 
+                    ! find the number of electron in this ion
                     nElec = elem - ion +1
+
+                    ! find the stat weights
                     call getOuterShell(elem, nElec, outShell, g0, g1)
 
-                    ! calculate the reverse charge exchange rate
+                    ! calculate the reverse charge exchange rate (only if deltaE_k > 1.)
                     if ( deltaE_k(elem,ion) > 1.) then
-                        revRate = chex(elem,ion,1) * &
-                                & (1.-grid%ionDen(cellP, &
-                                & elementXref(1),1))*grid%Hden(cellP)*&
-                                & 2. * exp(-deltaE_k(elem,ion)/TeUsed)/(real(g0)/real(g1))
+
+                       revRate = chex(elem,ion,1) * &
+                            & (1.-grid%ionDen(cellP, &
+                            & elementXref(1),1))*grid%Hden(cellP)*&
+                            & 2. * exp(-deltaE_k(elem,ion)/TeUsed)/(real(g0)/real(g1))
                     else
-                        revRate = 0.
+                       revRate = 0.
                     end if
 
                     if ( (elem>1) .or. (ion>1) ) collIon = 0.
 
                     ! calculate the X(i+1)/X(i) ratio
                     if (lgDebug) then
-                        ionRatio(elem,ion) = (nPhotoSte(elem,ion)+nPhotoDif(elem,ion)+&
-                                 & collIon+revRate)/&
-                                 & (NeUsed*alphaTot(elem,ion)&
-                                 & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
-                                 & grid%ionDen(cellP,elementXref(1),1))
+                       ionRatio(elem,ion) = (nPhotoSte(elem,ion)+nPhotoDif(elem,ion)+&
+                            & collIon+revRate)/&
+                            & (NeUsed*alphaTot(elem,ion)&
+                            & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
+                            & grid%ionDen(cellP,elementXref(1),1))
                     else
-                        ionRatio(elem,ion) = (nPhotoSte(elem,ion)+&
-                                 & collIon+revRate)/&
-                                 & (NeUsed*alphaTot(elem,ion)&
-                                 & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
-                                 & grid%ionDen(cellP,elementXref(1),1))
-                    end if
-                end do
-            end do
+                       ionRatio(elem,ion) = (nPhotoSte(elem,ion)+&
+                            & collIon+revRate)/&
+                            & (NeUsed*alphaTot(elem,ion)&
+                            & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
+                            & grid%ionDen(cellP,elementXref(1),1))
 
-            ! Calculate the products of ionRatio for each element. This product,
-            ! Prod[X(j+1)/X(j)], gives the ratio X(i+1)/X(0).
+                    end if
+                 end do
+              end do
+
+            ! calculate the products of ionRatio
             do elem = 1, nElements
                 do ion = 1, min(elem, nstages-1)
                    if (.not.lgElementOn(elem)) exit
+
+                   ! generate the product
                    do i = 1, ion
                        ionProd(elem, ion) = ionProd(elem,ion)*ionRatio(elem, i)
+
                    end do
+
                 end do
             end do
 
-            ! Calculate denominators for final ion abundances.
-            ! The denominator is 1 + Sum[ Prod[X(j+1)/X(j)] ]
+            ! calculate denominators for final ion abundances
             do elem = 1, nElements
                 do ion = 1, min(elem, nstages-1)
                     if (.not.lgElementOn(elem)) exit
+
                     denominator(elem) = denominator(elem) + ionProd(elem, ion)
-                end do
+
+               end do
             end do
 
-            ! Calculate the new fractional abundances for all ions.
-            ! X(0) = 1 / denominator
-            ! X(i) = (Prod[...]) / denominator
+
+            ! calculate the new abundances for all ions
             do elem = 1, nElements
                 do ion = 1, min(elem+1, nstages)
+
                     if (.not.lgElementOn(elem)) exit
+
+
                     if (ion == 1) then
                         grid%ionDen(cellP,elementXref(elem),ion) = real(1.0/denominator(elem))
                     else
+
                         grid%ionDen(cellP,elementXref(elem),ion) = &
                              & real(ionProd(elem, ion-1)/denominator(elem))
-                    end if
 
-                    if (grid%ionDen(cellP,elementXref(elem),ion) > xMax) &
-                         & grid%ionDen(cellP,elementXref(elem),ion) = xMax
-                    if (grid%ionDen(cellP,elementXref(elem),ion) < 1.e-20) &
-                         & grid%ionDen(cellP,elementXref(elem),ion) = 1.e-20
+                   end if
 
-                    ionDenUsed(elementXref(elem), ion) = &
-                         & grid%ionDen(cellP,elementXref(elem),ion)
-                    ionDenTemp(cellP,elementXref(elem),ion) = &
-                         & grid%ionDen(cellP,elementXref(elem),ion)
+                   ! take back within the limit
+                   if (grid%ionDen(cellP,elementXref(elem),ion) > xMax) &
+                        & grid%ionDen(cellP,elementXref(elem),ion) = xMax
+                   if (grid%ionDen(cellP,elementXref(elem),ion) < 1.e-20) &
+                        & grid%ionDen(cellP,elementXref(elem),ion) = 1.e-20
+
+
+                   ionDenUsed(elementXref(elem), ion) = &
+                        & grid%ionDen(cellP,elementXref(elem),ion)
+                   ! this was added to help MPI communication
+                   ionDenTemp(cellP,elementXref(elem),ion) = &
+                        & grid%ionDen(cellP,elementXref(elem),ion)
+
+
                 end do
             end do
 
-            ! Calculate new electron density (Ne) based on the new ion fractions.
-            ! This new Ne will be used in the next iteration.
-            NeUsed = 0.
+            ! calculate new Ne
+          NeUsed = 0.
             do elem = 1, nElements
                 do ion = 2, min(elem+1, nstages)
                     if (lgElementOn(elem)) then
@@ -2065,55 +1774,352 @@ subroutine ionBalance(lgConv)
                            &grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
                            &ionDenUsed(elementXref(elem), ion)
                     end if
+
                 end do
             end do
+
             NeUsed = NeUsed * grid%Hden(cellP)
-            
+
             if (NeUsed==0. .and.lgTalk) print*, '! ionBalance [warning]: cell ', xP,yP,zP, &
                  &'; NeUsed = ',  NeUsed
-            if (NeUsed == 0.) NeUsed = 1.
 
-            if (LgNeInput) then
-                correction = NeUsed/grid%NeInput(cellP)
-                grid%Hden(cellP) = grid%Hden(cellP)/correction
+            if (NeUsed == 0.) then
+               NeUsed = 1.
             end if
 
+            if (LgNeInput) then
+               correction = NeUsed/grid%NeInput(cellP)
+               grid%Hden(cellP) = grid%Hden(cellP)/correction
+            end if
+
+            ! this was added to help MPI implementation
             NeTemp(cellP) = NeUsed
+
             grid%Ne(cellP) = NeUsed
 
-            ! Calculate the relative change (residuals) in the key ion fractions.
+
+            ! calculate the residuals
             deltaHI   = (ionDenUsed(elementXref(1),1) - HIOld)   / HIOld
             deltaHeI  = (ionDenUsed(elementXref(2),1) - HeIOld)  / HeIOld
             deltaHeII = (ionDenUsed(elementXref(2),2) - HeIIOld) / HeIIOld
-            
-            !================================================================!
-            ! CONVERGENCE CHECK                                              
-            !================================================================!
-            
-            ! If the changes are small enough, convergence is achieved.
-            if ( (abs(deltaHI) <= limit) .and. (abs(deltaHeI) <= limit) .and. &
-                 (abs(deltaHeII) <= limit) ) then
-                lgConv = .true.
-                EXIT ! Exit the DO loop
-            end if
-            
-            nIterateX = nIterateX + 1
-            
-            ! If the maximum number of iterations is reached, exit the loop.
-            if (nIterateX >= maxIterateX) then
-                if (lgTalk)  print*, "! ionBalance: [warning] convergence not reached after ", &
-                     &maxIterateX, " steps. Finishing up..."
+
+            ! check for convergence
+            if ( ( (abs(deltaHI)>limit) .or. (abs(deltaHeI)>limit) .or. &
+                 &(abs(deltaHeII)>limit) ) .and. (nIterateX<maxIterateX) ) then
+
+                ! stepa up X iteration
+                nIterateX = nIterateX + 1
+                call ionBalance(lgConv)
+                return
+
+            else if (( (abs(deltaHI)>limit) .or. (abs(deltaHeI)>limit) .or. &
+                 &(abs(deltaHeII)>limit) ) .and. (nIterateX == maxIterateX) ) then
+
+               if (lgTalk)  print*, "! ionBalance: [warning] convergence not reached after ", &
+                    &maxIterateX, " steps. Finishing up..."
+
                 lgConv = .false.
-                EXIT ! Exit the DO loop
             end if
-            
-        END DO ! End of the main iterative loop
 
-        ! this was added to help MPI implementation
-        NeTemp(cellP) = NeUsed
+            ! this was added to help MPI implementation
+            NeTemp(cellP) = NeUsed
 
-      end subroutine ionBalance
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        end subroutine ionBalance
+        
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!subroutine ionBalance(lgConv)
+!        implicit none
+
+!        logical, intent(out)  :: lgConv      ! did ion bal converge?
+
+!        ! local variables
+!        real                  :: collIon     ! collisional ionization
+!        real                  :: collIonH     ! collisional ionization of H
+!        real                  :: correction  ! used in lgNeInput = .t.
+!        real                  :: deltaHI     ! delta(X(H0))
+!        real                  :: deltaHeI    ! delta(X(He0))
+!        real                  :: deltaHeII   ! delta(X(HeII))
+!        real                  :: expFact     ! exponential factor
+!        real                  :: t4          ! TeUsed/10000.
+!        real                  :: HIOld       ! X(H0) from last iteration
+!        real                  :: HeIOld      ! X(He0) from last iteration
+!        real                  :: HeIIOld     ! X(He+) from last iteration
+!        real, parameter       :: limit = 0.01 ! convergence limit
+
+!        integer               :: elem, ion   ! element and ion counters
+!        integer               :: g0,g1       ! stat weights
+!        integer               :: i           ! counter
+!        integer               :: nElec       ! of e's in the ion
+!        integer               :: outShell    ! byproduct of proc to get stat weights
+!        integer               :: nIterateX   ! iteration counter
+
+!        real                  :: revRate     ! reverse charge exchange rate
+
+!        double precision, dimension(nELements) :: &
+!             & denominator    ! denominator of final ion abundance
+
+!        real, dimension(nElements, nstages) :: &
+!             & deltaE_k       ! deltaE/k [K]
+
+!        double precision, dimension(nElements, nstages) :: &
+!             & ionRatio, &    ! X(i+1)/X(+i)
+!             & ionProd        ! ionRatio products
+!        real, dimension(nElements, nstages,4) :: &
+!             & chex           ! ch exchange coeff in cm^3/s
+
+
+!        !================================================================!
+!        ! START OF THE MAIN ITERATIVE LOOP                             
+!        ! This loop replaces the original recursive structure. It will 
+!        ! continue until the ionic fractions converge or the maximum 
+!        ! number of iterations is reached.
+!        !================================================================!
+!        nIterateX = 0 ! Initialize iteration counter
+!        lgConv    = .false.
+
+!        DO
+!            ! initialize variables for the current iteration
+!            correction  = 0.
+!            ionRatio    = 0.
+!            ionProd     = 1.
+!            denominator = 1.
+
+!            ! Store the ion densities from the previous step to check for convergence later.
+!            HIOld   = ionDenUsed(elementXref(1),1)
+!            HeIOld  = ionDenUsed(elementXref(2),1)
+!            HeIIOld = ionDenUsed(elementXref(2),2)
+!            
+!            ! take into account collisional ionization of H
+!            ! Drake & Ulrich, ApJS42(1980)351
+!            expFact = 157893.94/TeUsed
+!            if (expFact > 75.) then
+!                ! prevents underflow of exponential factor in collIonH
+!                expFact = 75.
+!            end if
+!            collIon = 2.75E-16*TeUsed*sqrt(TeUsed)*&
+!                    & (157893.94/TeUsed+2.)*exp(-expFact)
+
+
+!            ! Initialize charge exchange coefficients.
+!            ! The set of charge exchange coeffs is not complete; the following might need
+!            ! to be changed when a more complete set is available
+!            chex      = 0.
+!            deltaE_k  = 0.
+
+!            chex(2,1,:)  = (/7.47e-6, 2.06, 9.93,-3.89/)! He0
+!            chex(2,2,:)  = (/1.e-5  , 0.  , 0.  , 0./)  ! He+
+!            chex(3,2,:)  = (/1.26   , 0.96,3.02 ,-0.65/)! Li+
+!            chex(3,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Li+2
+!            chex(4,2,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Be+
+!            chex(4,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! Be+2
+!            chex(4,4,:)  = (/5.17   , 0.82, -.69, -1.12 /)! Be+3
+!            chex(5,2,:)  = (/2.e-2  , 0.  , 0.  , 0. /) ! B+
+!            chex(5,3,:)  = (/1.e-5  , 0.  , 0.  , 0. /) ! B+2
+!            chex(5,4,:)  = (/5.27e-1, 0.76,-0.63,-1.17/)! B+3
+!            chex(6,1,:)  = (/1.76e-9, 8.33, 4278.78, -6.41/)! C0
+!            chex(6,2,:)  = (/1.67e-4, 2.79, 304.72, -4.07/)! C+
+!            chex(6,3,:)  = (/3.25   , 0.21, 0.19, -3.29/)! C+2
+!            chex(6,4,:)  = (/332.46 ,-0.11,-0.995,-1.58e-3/)! C+3
+!            chex(7,1,:)  = (/1.01e-3,-0.29,-0.92, -8.38/)! N0
+!            chex(7,2,:)  = (/3.05e-1, 0.60, 2.65, -0.93/)! N+
+!            chex(7,3,:)  = (/4.54   , 0.57,-0.65, -0.89/)! N2+
+!            chex(7,4,:)  = (/3.28   , 0.52,-0.52, -0.19/)! N3+
+!            chex(8,1,:)  = (/1.04   , 3.15e-2, -0.61, -9.73/)! O0
+!            chex(8,2,:)  = (/1.04   , 0.27, 2.02, -5.92/)! O+
+!            chex(8,3,:)  = (/3.98   , 0.26, 0.56, -2.62/)! O2+
+!            chex(8,4,:)  = (/2.52e-1, 0.63, 2.08, -4.16/)! O3+
+!            chex(9,2,:)  = (/1.e-5  , 0.  , 0.  , 0./) ! F+
+!            chex(9,3,:)  = (/9.86   , 0.29,-0.21,-1.15/) ! F+2
+!            chex(9,4,:)  = (/7.15e-1, 1.21,-0.70,-0.85/) ! F3+
+!            chex(10,2,:) = (/1.e-5  , 0.  , 0.  , 0.  /) ! Ne+
+!            chex(10,3,:) = (/14.73  , 4.52e-2, -0.84, -0.31 /) ! Ne+2
+!            chex(10,4,:) = (/6.47   , 0.54 , 3.59 , -5.22 /) ! Ne+3
+!            chex(11,2,:) = (/1.e-5  , 0.   , 0.  , 0. /) ! Na+
+!            chex(11,3,:) = (/1.33   , 1.15 , 1.20 , -0.32 /)! Na+2
+!            chex(11,4,:) = (/1.01e-1, 1.34 , 10.05, -6.41 /)! Na+3
+!            chex(12,2,:) = (/8.58e-5, 2.49e-3, 2.93e-2, -4.33 /)! Mg+
+!            chex(12,3,:) = (/6.49   , 0.53 , 2.82, -7.63 /) ! Mg+2
+!            chex(12,4,:) = (/6.36   , 0.55 , 3.86, -5.19 /) ! Mg+3
+!            chex(13,2,:) = (/1.e-5  , 0.   , 0.  , 0./) ! Al+
+!            chex(13,3,:) = (/7.11e-5, 4.12 , 1.72e4, -22.24/)! Al+2
+!            chex(13,4,:) = (/7.52e-1, 0.77 , 6.24, -5.67/) ! Al+3
+!            chex(14,2,:) = (/1.23   , 0.24 , 3.17, 4.18e-3/) ! Si+
+!            chex(14,3,:) = (/4.900e-1, -8.74e-2, -0.36, -0.79/)! Si+2
+!            chex(14,4,:) = (/7.58   , 0.37 , 1.06, -4.09/)! Si+3
+!            chex(16,1,:) = (/3.82e-7, 11.10, 2.57e4, -8.22/)! S0
+!            chex(16,2,:) = (/1.e-5  , 0.   , 0.  ,0. /)! S+
+!            chex(16,3,:) = (/2.29   , 4.02e-2, 1.59, -6.06/)! S+2
+!            chex(16,4,:) = (/6.44   , 0.13 , 2.69 , -5.69/)! S+3
+!            chex(18,2,:) = (/1.e-5  , 0.   , 0.  , 0./) ! Ar+
+!            chex(18,3,:) = (/4.57   , 0.27 , -0.18 , -1.57/)! Ar+2
+!            chex(18,4,:) = (/6.37   , 2.12 , 10.21 , -6.22/)! Ar+3
+!            
+!            ! BUG NOTE: The following lines for Ca use index 18 (Argon), overwriting the Argon values.
+!            ! The index should likely be 20 for Calcium.
+!            chex(20,3,:) = (/3.17e-2, 2.12 , 12.06 , -0.40/)! Ca+2
+!            chex(20,4,:) = (/2.68   , 0.69 , -0.68 , -4.47/)! Ca+3
+
+!            chex(26,2,:) = (/1.26   , 7.72e-2, -0.41, -7.31/)! Fe+
+!            chex(26,3,:) = (/3.42   , 0.51 , -2.06 , -8.99/)! Fe+2.
+
+!            deltaE_k(7,1) = 10863.
+!            deltaE_k(8,1) = 2205.
+
+!            chex(:,:,1) = chex(:,:,1)*1.e-9
+!            t4 = TeUsed/10000.
+
+!            ! Calculate the ion ratio X(i+1)/X(i) for each species.
+!            ! This is the core of the ionization balance, where the ratio of
+!            ! ionization rates to recombination rates is computed.
+!            do elem = 1, nElements
+!                do ion = 1, min(elem, nstages-1)
+!                    if (.not.lgElementOn(elem)) exit
+
+!                    ! Calculate temperature-dependent charge exchange rate
+!                    chex(elem,ion,1) = chex(elem,ion,1)*(t4**chex(elem,ion,2))*&
+!                                     & (1.+chex(elem,ion,3)*exp(chex(elem,ion,4)*t4))
+
+!                    if (chex(elem,ion,1) < 0. ) chex(elem,ion,1) = 0.
+!                    if (TeUsed < 6000. .or. TeUsed>5.e4) chex(elem,ion,1) = 0.
+
+!                    nElec = elem - ion +1
+!                    call getOuterShell(elem, nElec, outShell, g0, g1)
+
+!                    ! calculate the reverse charge exchange rate
+!                    if ( deltaE_k(elem,ion) > 1.) then
+!                        revRate = chex(elem,ion,1) * &
+!                                & (1.-grid%ionDen(cellP, &
+!                                & elementXref(1),1))*grid%Hden(cellP)*&
+!                                & 2. * exp(-deltaE_k(elem,ion)/TeUsed)/(real(g0)/real(g1))
+!                    else
+!                        revRate = 0.
+!                    end if
+
+!                    if ( (elem>1) .or. (ion>1) ) collIon = 0.
+
+!                    ! calculate the X(i+1)/X(i) ratio
+!                    if (lgDebug) then
+!                        ionRatio(elem,ion) = (nPhotoSte(elem,ion)+nPhotoDif(elem,ion)+&
+!                                 & collIon+revRate)/&
+!                                 & (NeUsed*alphaTot(elem,ion)&
+!                                 & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
+!                                 & grid%ionDen(cellP,elementXref(1),1))
+!                    else
+!                        ionRatio(elem,ion) = (nPhotoSte(elem,ion)+&
+!                                 & collIon+revRate)/&
+!                                 & (NeUsed*alphaTot(elem,ion)&
+!                                 & +chex(elem,ion,1)*grid%Hden(grid%active(xP,yp,zP)) * &
+!                                 & grid%ionDen(cellP,elementXref(1),1))
+!                    end if
+!                end do
+!            end do
+
+!            ! Calculate the products of ionRatio for each element. This product,
+!            ! Prod[X(j+1)/X(j)], gives the ratio X(i+1)/X(0).
+!            do elem = 1, nElements
+!                do ion = 1, min(elem, nstages-1)
+!                   if (.not.lgElementOn(elem)) exit
+!                   do i = 1, ion
+!                       ionProd(elem, ion) = ionProd(elem,ion)*ionRatio(elem, i)
+!                   end do
+!                end do
+!            end do
+
+!            ! Calculate denominators for final ion abundances.
+!            ! The denominator is 1 + Sum[ Prod[X(j+1)/X(j)] ]
+!            do elem = 1, nElements
+!                do ion = 1, min(elem, nstages-1)
+!                    if (.not.lgElementOn(elem)) exit
+!                    denominator(elem) = denominator(elem) + ionProd(elem, ion)
+!                end do
+!            end do
+
+!            ! Calculate the new fractional abundances for all ions.
+!            ! X(0) = 1 / denominator
+!            ! X(i) = (Prod[...]) / denominator
+!            do elem = 1, nElements
+!                do ion = 1, min(elem+1, nstages)
+!                    if (.not.lgElementOn(elem)) exit
+!                    if (ion == 1) then
+!                        grid%ionDen(cellP,elementXref(elem),ion) = real(1.0/denominator(elem))
+!                    else
+!                        grid%ionDen(cellP,elementXref(elem),ion) = &
+!                             & real(ionProd(elem, ion-1)/denominator(elem))
+!                    end if
+
+!                    if (grid%ionDen(cellP,elementXref(elem),ion) > xMax) &
+!                         & grid%ionDen(cellP,elementXref(elem),ion) = xMax
+!                    if (grid%ionDen(cellP,elementXref(elem),ion) < 1.e-20) &
+!                         & grid%ionDen(cellP,elementXref(elem),ion) = 1.e-20
+
+!                    ionDenUsed(elementXref(elem), ion) = &
+!                         & grid%ionDen(cellP,elementXref(elem),ion)
+!                    ionDenTemp(cellP,elementXref(elem),ion) = &
+!                         & grid%ionDen(cellP,elementXref(elem),ion)
+!                end do
+!            end do
+
+!            ! Calculate new electron density (Ne) based on the new ion fractions.
+!            ! This new Ne will be used in the next iteration.
+!            NeUsed = 0.
+!            do elem = 1, nElements
+!                do ion = 2, min(elem+1, nstages)
+!                    if (lgElementOn(elem)) then
+!                      if( ionDenUsed(elementXref(elem),ion) >= 1.e-10) &
+!                           & NeUsed = NeUsed + (ion-1)*&
+!                           &grid%elemAbun(grid%abFileIndex(xP,yP,zP),elem)*&
+!                           &ionDenUsed(elementXref(elem), ion)
+!                    end if
+!                end do
+!            end do
+!            
+!            NeUsed = NeUsed * grid%Hden(cellP)
+!            
+!            if (NeUsed==0. .and.lgTalk) print*, '! ionBalance [warning]: cell ', xP,yP,zP, &
+!                 &'; NeUsed = ',  NeUsed
+!            if (NeUsed == 0.) NeUsed = 1.
+
+!            if (LgNeInput) then
+!                correction = NeUsed/grid%NeInput(cellP)
+!                grid%Hden(cellP) = grid%Hden(cellP)/correction
+!            end if
+
+!            NeTemp(cellP) = NeUsed
+!            grid%Ne(cellP) = NeUsed
+
+!            ! Calculate the relative change (residuals) in the key ion fractions.
+!            deltaHI   = (ionDenUsed(elementXref(1),1) - HIOld)   / HIOld
+!            deltaHeI  = (ionDenUsed(elementXref(2),1) - HeIOld)  / HeIOld
+!            deltaHeII = (ionDenUsed(elementXref(2),2) - HeIIOld) / HeIIOld
+!            
+!            !================================================================!
+!            ! CONVERGENCE CHECK                                              
+!            !================================================================!
+!            
+!            ! If the changes are small enough, convergence is achieved.
+!            if ( (abs(deltaHI) <= limit) .and. (abs(deltaHeI) <= limit) .and. &
+!                 (abs(deltaHeII) <= limit) ) then
+!                lgConv = .true.
+!                EXIT ! Exit the DO loop
+!            end if
+!            
+!            nIterateX = nIterateX + 1
+!            
+!            ! If the maximum number of iterations is reached, exit the loop.
+!            if (nIterateX >= maxIterateX) then
+!                if (lgTalk)  print*, "! ionBalance: [warning] convergence not reached after ", &
+!                     &maxIterateX, " steps. Finishing up..."
+!                lgConv = .false.
+!                EXIT ! Exit the DO loop
+!            end if
+!            
+!        END DO ! End of the main iterative loop
+
+!        ! this was added to help MPI implementation
+!        NeTemp(cellP) = NeUsed
+
+!      end subroutine ionBalance
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
         subroutine calcAlpha()
             implicit none
