@@ -1084,7 +1084,10 @@ module emission_mod
         ! triplet states:
         ! calculate effective recombination coefficients to triplet states[e-14 cm^3/s]
         ! Benjamin, SKillman and mits, 1999, ApJ 514, 307
-        T4 = TeUsed*1.e-4
+        
+        ! limit T4 to the data limit used in the paper fits
+        T4 = MAX(5000.,TeUsed)*1.e-4
+        
         alpha2tS = 27.2*(T4**(-0.678))
 
         ! calculate correction for partial sums and normalization constant

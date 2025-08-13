@@ -2122,6 +2122,14 @@ endif
         elseif (NeUsed >= 1.e6) then
            denint=3
         end if
+        
+        ! Safeguard: Prevent T4 from being too small for the fitting formula
+        ! this means HeI lines will be wrong in these regions
+        ! this is a temp fix!!!!!!
+        if (TeUsed < 5000.) then
+           T4 = 5000.0 / 10000.
+        endif
+
 
         ! data from Benjamin, Skillman and Smits ApJ514(1999)307 [e-25 ergs*cm^3/s]
         if (denint>0.and.denint<3) then
