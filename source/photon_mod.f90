@@ -348,6 +348,7 @@ module photon_mod
                 difSourceL(3) = zP(igpr)
 
 
+
                 enPacket = newPhotonPacket(chType, position, xp, yp, zp, gP, difSourceL)
 
             ! if the photon is diffuse
@@ -641,6 +642,7 @@ module photon_mod
                      print*, igpi, initPhotonPacket%xP(igpi),  &
                           & grid(gP)%xAxis(grid(gP)%nx), &
                           & initPhotonPacket%zP(igpi), &
+
                           & grid(gP)%zAxis(grid(gP)%nz),  random, &
                           & initPhotonPacket%position%z
 
@@ -1006,6 +1008,7 @@ module photon_mod
                   stop
                end if
 
+
                ! check that the position is not inside the inner region
                if (grid(gP)%active(xP(igPn),yP(igPn),zP(igPn))<= 0) then
                   print*, "! newPhotonPacket: position of the new dust emitted &
@@ -1198,8 +1201,9 @@ module photon_mod
           integer                         :: xP,yP,zP ! cartesian axes indeces
           integer                         :: gP       ! grid index
           integer                         :: igpp     ! grid index 1=mother 2=sub
-          integer                         :: safeLimit =1000
-                                                      ! safe limit for the loop
+          integer                         :: safeLimit =1000 ! safe limit for the loop
+                                                      
+          integer                         :: active_cell, abun_idx, n_species, comp_idx_start !auxiliary variables for checks on dust scattering
 
           character(len=7)                :: packetType ! stellar, diffuse, dustEmitted?
 
@@ -1773,31 +1777,33 @@ module photon_mod
                       scaInt = scaInt + 1.
 
                       if (lgMultiDustChemistry) then
-                         do nS = 1, nSpeciesPart(grid(gP)%dustAbunIndex(grid(gP)%active(xP,yP,zP)))
-                            if (grainabun(grid(gP)%dustAbunIndex(grid(gP)%active(xP,yP,zP)),nS)>0. &
-                                 &.and. grid(gP)%Tdust(nS, 0, &
-                                 & grid(gP)%active(xP,yP,zP))<TdustSublime(dustComPoint(&
-                                 &grid(gP)%dustAbunIndex(grid(gP)%active(xP,yP,zP)))-1+nS)) exit
-                         end do
-                         if (nS>nSpeciesPart(grid(gP)%dustAbunIndex(grid(gP)%active(xP,yP,zP)))) then
-                            print*, "! pathSegment: packet scatters with dust at position where all &
-                                 &grains have sublimed -1-."
-                            print*, xP,yP,zP, grid(gP)%active(xP,yP,zP), tauCell, absTau, passProb
+                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                         ! --- Check if ANY non-sublimed dust exists using array syntax ---
+                         active_cell    = grid(gP)%active(xP, yP, zP)
+                         abun_idx       = grid(gP)%dustAbunIndex(active_cell)
+                         n_species      = nSpeciesPart(abun_idx)
+                         comp_idx_start = dustComPoint(abun_idx)
+
+                         if (.not. ANY( grainabun(abun_idx, 1:n_species) > 0.0 .and. &
+                                        grid(gP)%Tdust(1:n_species, 0, active_cell) < &
+                                        TdustSublime(comp_idx_start : comp_idx_start + n_species - 1) )) then
+                            print*, "! pathSegment: packet scatters with dust at position where all grains have sublimed -1-."
+                            print*, xP, yP, zP, active_cell, tauCell, absTau, passProb
                             stop
                          end if
+                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
                       else
-                         do nS = 1, nSpeciesPart(1)
-                            if (grainabun(1,nS)>0. &
-                                 &.and. grid(gP)%Tdust(nS, 0, &
-                                 & grid(gP)%active(xP,yP,zP))<TdustSublime(dustComPoint(&
-                                 &1)-1+nS)) exit
-                         end do
-                         if (nS>nSpeciesPart(1)) then
-                            print*, "! pathSegment: packet scatters with dust at position where all &
-                                 &grains have sublimed -2-."
-                            print*, xP,yP,zP, grid(gP)%active(xP,yP,zP), tauCell, absTau, passProb
-                            stop
-                         end if
+                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                         ! --- Check if ANY non-sublimed dust exists using array syntax ---
+                         if (.not. ANY( grainabun(1, 1:nSpeciesPart(1)) > 0.0 .and. &
+                                        grid(gP)%Tdust(1:nSpeciesPart(1), 0, grid(gP)%active(xP,yP,zP)) < &
+                                        TdustSublime(dustComPoint(1) : dustComPoint(1) + nSpeciesPart(1) - 1) )) then
+                             print*, "! pathSegment: packet scatters with dust at position where all grains have sublimed -2-."
+                             print*, xP, yP, zP, grid(gP)%active(xP,yP,zP), tauCell, absTau, passProb, probSca
+                             stop
+                          end if
+                         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                         
                       end if
 
                       ! packet is scattered by the grain
@@ -1919,6 +1925,7 @@ module photon_mod
                          if ( rvec%y > ( grid(grid(gP)%motherP)%yAxis(enPacket%yP(1)) + &
                               & grid(grid(gP)%motherP)%yAxis(enPacket%yP(1)+1)/2.) ) &
                               & enPacket%yP(1) = enPacket%yP(1)+1
+
                       end if
 
                       call locate(grid(grid(gP)%motherP)%zAxis, rvec%z, enPacket%zP(1))
@@ -2779,6 +2786,7 @@ module photon_mod
                   gP = 1
                   igpp = 1
 
+
                end if
 
             end if
@@ -3164,6 +3172,7 @@ end subroutine energyPacketDriver
 
 
  end module photon_mod
+
 
 
 
