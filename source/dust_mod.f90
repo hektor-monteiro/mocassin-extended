@@ -12,9 +12,8 @@ module dust_mod
   contains
 
     subroutine dustDriver(grid)
+      use mpi
       implicit none
-
-      include 'mpif.h'
 
       type(grid_type), intent(inout) :: grid
 

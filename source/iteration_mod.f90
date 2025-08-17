@@ -33,9 +33,8 @@ module iteration_mod
        contains
 
        recursive subroutine iterateMC()
+           use mpi
            implicit none
-
-           include 'mpif.h'
 
            ! local variables
            real, allocatable :: budgetTemp(:,:)      ! temporary dust heating budget array
@@ -134,7 +133,7 @@ module iteration_mod
                  end do
                  if (taskid==0) print*, '! iterateMC: ionizationDriver out', iG
 
-                 allocate(opacityTemp(0:grid(iG)%nCells, nbins), stat = err)
+                 allocate(opacityTemp(0:grid(iG)%nCells, 1:nbins), stat = err)
                  if (err /= 0) then
                     print*, "! iterateMC: can't allocate array memory: opacityTemp ", iG
                     stop

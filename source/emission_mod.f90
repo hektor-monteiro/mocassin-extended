@@ -15,7 +15,7 @@ module emission_mod
 
     double precision, dimension(34)        :: HeIRecLines          ! emissivity from HeI rec lines
 
-    real                                :: BjumpTemp   !
+    real                                :: BjumpTemp=0   !
     real                                :: HbetaProb   ! probability of Hbeta
     real                                :: log10Ne     ! log10(Ne) at this cell
     real                                :: log10Te     ! log10(Te) at this cell

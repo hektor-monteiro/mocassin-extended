@@ -39,9 +39,8 @@ program MoCaSSiN
     use xSec_mod
     use readdata_mod
 
+    use mpi
     implicit none
-
-    include 'mpif.h'
 
     type(grid_type) :: grid3D(maxGrids)       ! the 3D Cartesian  grid
 
