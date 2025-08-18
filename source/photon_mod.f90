@@ -1086,7 +1086,7 @@ module photon_mod
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Probability considering path stretching with fixed alpha
 !        call random_number(random)
-!        alpha = 0.1 !1.0 / (1.0 + tauCell)
+!        alpha = 1.0 / (1.0 + tauCell)
 !        passProb = -log(1.-random)/alpha
 !        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
@@ -1731,7 +1731,7 @@ module photon_mod
                    random = 1.-random
                    
                    ! force first event to be scattering
-                   if (i ==1) then
+                   if (i ==1 .and. probSca > 0.) then
                       random = probSca
                       enPacket%weight = enPacket%weight * probSca
                    endif
