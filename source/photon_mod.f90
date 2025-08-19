@@ -370,7 +370,7 @@ module photon_mod
             
             enPacket%weight = start_weight
             
-            !print*, reRun, chType, enPacket%weight
+            !print*, reRun, chType, enPacket%weight, enPacket%nuP
                         
             reRun = 0
 
@@ -1077,11 +1077,11 @@ module photon_mod
         REAL :: C        ! Normalization constant for g(x)
         REAL :: G_alpha     ! Value of the CDF at the boundary x=20
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! original basic probability
-        call random_number(random)
-        passProb = -log(1.-random)
-        weightFactor = 1.0
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! original basic probability
+!        call random_number(random)
+!        passProb = -log(1.-random)
+!        weightFactor = 1.0
 
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Probability considering path stretching with fixed alpha
@@ -1090,44 +1090,24 @@ module photon_mod
 !        passProb = -log(1.-random)/alpha
 !        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
-!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!        ! Using modified exponential for strech part
-!        ! Define a constant for the composite distribution.
-!        alpha = 1.0 / (1.0 + tauCell)
-!        compXi = 0.2 ! Define the composite scheme parameter.
-!        ! Sample the optical depth from the composite distribution.
-!        if (random < compXi) then
-!           ! Sample from the exponential distribution part
-!           call random_number(random)
-!           passProb = -log(1.0 - random)
-!        else
-!          ! Sample from the modified exponential distribution part
-!          call random_number(random)
-!          passProb = -log(1.0 - random) / alpha
-!        endif
-!        ! Apply the weight correction based on the composite scheme formula.
-!        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! Using modified exponential for strech part
+        ! Define a constant for the composite distribution.
+        alpha = 1.0 / (1.0 + tauCell)
+        compXi = 0.5 ! Define the composite scheme parameter.
+        ! Sample the optical depth from the composite distribution.
+        if (random < compXi) then
+           ! Sample from the exponential distribution part
+           call random_number(random)
+           passProb = -log(1.0 - random)
+        else
+          ! Sample from the modified exponential distribution part
+          call random_number(random)
+          passProb = -log(1.0 - random) / alpha
+        endif
+        ! Apply the weight correction based on the composite scheme formula.
+        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
          
-!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!        ! Using uniform for strech part
-!        ! Define a constant for the composite distribution.
-!        alpha = 1.0 / (1.0 + tauCell)
-!        ! Sample the optical depth from the composite distribution.
-!        if (tauCell < 1.0) then
-!           ! Sample from the exponential distribution part
-!           call random_number(random)
-!           passProb = -log(1.0 - random)
-!           weightFactor = 1.0
-!        else
-!          ! Sample from uniform distribution part
-!          call random_number(random)
-!          !passProb = -log(1.0 - random) / alpha
-!          passProb = (-1.0 / alpha) * log(1.0d0 - random * (1.0 - EXP(-20.0 * alpha)))
-!          weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
-!          
-!        endif
-!        ! Apply the weight correction based on the composite scheme formula.
-!        !weightFactor = 1.0 / ( (1.0 - compXi) + compXi/exp(-passProb) )
          
 
 
@@ -1207,7 +1187,7 @@ module photon_mod
 
           character(len=7)                :: packetType ! stellar, diffuse, dustEmitted?
 
-          logical                         :: lgScattered ! is the packet scattering with dust?
+          logical                         :: lgScattered=.False. ! is the packet scattering with dust?
           logical                         :: lgReturn
 
 
@@ -1304,6 +1284,8 @@ module photon_mod
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
           ! Using new sampling subroutine
           call calculate_pass_prob_and_weight(tauCell, enPacket%weight, passProb, weightFactor)
+!          print*, '           i, reRun, lgScattered, chTypeIn, enPacket%weight, weightFactor, enPacket%nuP, tauCell, absTau, passProb, probSca'
+!          print*, i, reRun, lgScattered, chTypeIn, enPacket%weight, weightFactor, enPacket%nuP, tauCell, absTau, passProb, probSca
           enPacket%weight = enPacket%weight * weightFactor
           !print*, tauCell, passProb, weightFactor
           !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -1312,10 +1294,11 @@ module photon_mod
           if (lgPlaneIonization) then
              safeLimit=5000
           else
-             safeLimit=500000
+             safeLimit=50000
 !             safeLimit=500
           end if
-
+          
+          
           do i = 1, safeLimit
 
              do j = 1, safeLimit
@@ -2898,6 +2881,8 @@ module photon_mod
 
 
          end if
+         
+         !print*, i, reRun, lgScattered, chTypeIn, enPacket%weight, weightFactor, enPacket%nuP, tauCell, absTau, passProb, probSca
 
       end do ! safelimit loop
 

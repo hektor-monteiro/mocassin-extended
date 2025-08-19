@@ -667,6 +667,8 @@ subroutine iterateT()
 
         ! Ensure temperature doesn't become non-physical
         if (TeUsed < 10.) TeUsed = 10.
+        ! Ensure temperature doesn't go beyond atomic data limit for H
+        if (TeUsed > 30000.) TeUsed = 30000.
         
         if (cellP == 9249) print*, nIterateT, TeUsed, '[', Tlow, Thigh, ']', (thResidual), thLimit * heatInt
 
@@ -697,7 +699,7 @@ subroutine iterateT()
         grid%lgBlack(cellP) = 1 ! Flag this cell as problematic
     end if
     
-!    if (TeUsed < 4000.) grid%lgBlack(cellP) = 1 ! Flag this cell as problematic
+    if (TeUsed >= 30000.) grid%lgBlack(cellP) = 1 ! Flag this cell as problematic
     
     ! --- Update grid values and check overall model convergence ---
     grid%Te(cellP) = TeUsed
