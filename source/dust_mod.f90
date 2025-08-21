@@ -12,9 +12,8 @@ module dust_mod
   contains
 
     subroutine dustDriver(grid)
+      use mpi
       implicit none
-
-      include 'mpif.h'
 
       type(grid_type), intent(inout) :: grid
 
@@ -25,7 +24,7 @@ module dust_mod
 
       integer :: err ! allocation error status
       integer :: iP,jP,kP ! counter
-      integer :: size ! size of MPI reducing string
+      integer(kind=int64) :: size ! size of MPI reducing string
       integer :: yTop
 
       logical,save :: lgFirstDustEm=.true.

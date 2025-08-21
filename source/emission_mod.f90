@@ -15,7 +15,7 @@ module emission_mod
 
     double precision, dimension(34)        :: HeIRecLines          ! emissivity from HeI rec lines
 
-    real                                :: BjumpTemp   !
+    real                                :: BjumpTemp=0   !
     real                                :: HbetaProb   ! probability of Hbeta
     real                                :: log10Ne     ! log10(Ne) at this cell
     real                                :: log10Te     ! log10(Te) at this cell
@@ -69,13 +69,10 @@ module emission_mod
            nspE = 1
         end if
 
-
         ! set the dust emission PDF
         if (lgDust .and. .not.lgGas) call setDustPDF()
 
         if (.not.lgGas) return
-
-
 
         ! find the physical properties of this cell
         ionDenUsed= grids(iG)%ionDen(cellPUsed, :, :)
@@ -108,13 +105,9 @@ module emission_mod
         ffCoeff1       = 0.
         ffCoeff2       = 0.
 
-
-
         ! calculates the H, He and heavy ions f-b and f-f emission
         ! coefficients
         call fb_ff()
-
-
 
         ! calculate two photon emission coefficients for HI, HeI and
         ! HeII
@@ -755,7 +748,14 @@ module emission_mod
         real                       :: HeII4686    ! HeII 4686 emission
         real                       :: Lalpha      ! Lalpha emission
         real                       :: T4          ! TeUsed/10000.
-        real                       :: x1, x2
+        real                       :: x1, x2, coeff
+
+        real, dimension(34) :: HeIRecLines_raw ! Temporary array to hold raw values
+        logical, parameter :: DEBUG_THIS_CELL = .true. ! Set to .false. to turn off
+        real, parameter :: MIN_SAFE_TEMP = 5000.0 ! Validity limit of the BSS99 formula
+
+        ! The index for 5876A 
+        integer, parameter :: I_5876 = 16
 
         T4 = TeUsed / 10000.
 
@@ -803,6 +803,13 @@ module emission_mod
 
         ! now do HeI
 
+        ! Safeguard: Prevent T4 from being too small for the fitting formula
+        ! this means HeI lines will be wrong in these regions
+        ! this is a temp fix!!!!!!
+        if (TeUsed < 5000.) then
+           T4 = 5000.0 / 10000.
+        endif
+
         if (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 100.) then
            denint=0
         elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 100. .and. grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 1.e4) then
@@ -812,25 +819,101 @@ module emission_mod
         elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 1.e6) then
            denint=3
         end if
+        
+        if (TeUsed > 0.) then
 
-        ! data from Benjamin, Skillman and Smits ApJ514(1999)307 [e-25 ergs*cm^3/s]
-        if (denint>0.and.denint<3) then
-           do i = 1, 34
-              x1=HeIrecLineCoeff(i,denint,1)*(T4**(HeIrecLineCoeff(i,denint,2)))*exp(HeIrecLineCoeff(i,denint,3)/T4)
-              x2=HeIrecLineCoeff(i,denint+1,1)*(T4**(HeIrecLineCoeff(i,denint+1,2)))*exp(HeIrecLineCoeff(i,denint+1,3)/T4)
+           ! data from Benjamin, Skillman and Smits ApJ514(1999)307 [e-25 ergs*cm^3/s]
+           if (denint>0.and.denint<3) then
+              do i = 1, 34
+                  x1=HeIrecLineCoeff(i,denint,1)*(T4**(HeIrecLineCoeff(i,denint,2)))*exp(HeIrecLineCoeff(i,denint,3)/T4)
+                  x2=HeIrecLineCoeff(i,denint+1,1)*(T4**(HeIrecLineCoeff(i,denint+1,2)))*exp(HeIrecLineCoeff(i,denint+1,3)/T4)
+                  HeIRecLines(i) = x1+((x2-x1)*(NeUsed-100.**denint)/(100.**(denint+1)-100.**(denint)))
+              end do
+          elseif(denint==0) then
+              do i = 1, 34
+                 HeIRecLines(i) = HeIrecLineCoeff(i,1,1)*(T4**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/T4)
+              end do
+          elseif(denint==3) then
+              do i = 1, 34
+                 HeIRecLines(i) = HeIrecLineCoeff(i,3,1)*(T4**(HeIrecLineCoeff(i,3,2)))*exp(HeIrecLineCoeff(i,3,3)/T4)
+              end do
+          end if
+          
+       else
+       
+       ! conferir extrapolação abaixo para regime de densidade pois está errado!
+       ! Use Power-Law Extrapolation for Te < 5000       
+           if (denint>0.and.denint<3) then
+           ! here we assume that coefficients converge to the same slope for any densities
+           ! Kept original if structure here to make this more explicit for now
+              do i = 1, 34
+                 ! for T4=(5000/1e4)
+                 x1 = HeIrecLineCoeff(i,1,1)*((0.5)**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/(0.5))
+                 ! for T4=(6000/1e4)
+                 x2 = HeIrecLineCoeff(i,1,1)*((0.6)**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/(0.6))
+                 ! estimated slope
+                 coeff = (LOG10(x1)-LOG10(x2))/(LOG10(0.5)-LOG10(0.6))
+                 
+                 !final extrapolation
+                 HeIRecLines(i) = (x1/0.5**coeff)*T4**coeff
+              end do
+          elseif(denint==0) then
+              do i = 1, 34                 
+                 ! for T4=(5000/1e4)
+                 x1 = HeIrecLineCoeff(i,1,1)*((0.5)**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/(0.5))
+                 ! for T4=(6000/1e4)
+                 x2 = HeIrecLineCoeff(i,1,1)*((0.6)**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/(0.6))
+                 ! estimated slope
+                 coeff = (LOG10(x1)-LOG10(x2))/(LOG10(0.5)-LOG10(0.6))
+                 
+                 !final extrapolation
+                 HeIRecLines(i) = (x1/0.5**coeff)*T4**coeff
+              end do
+          elseif(denint==3) then
+              do i = 1, 34
+                 ! for T4=(5000/1e4)
+                 x1 = HeIrecLineCoeff(i,3,1)*((0.5)**(HeIrecLineCoeff(i,3,2)))*exp(HeIrecLineCoeff(i,3,3)/(0.5))
+                 ! for T4=(6000/1e4)
+                 x2 = HeIrecLineCoeff(i,3,1)*((0.6)**(HeIrecLineCoeff(i,3,2)))*exp(HeIrecLineCoeff(i,3,3)/(0.6))
+                 ! estimated slope
+                 coeff = (LOG10(x1)-LOG10(x2))/(LOG10(0.5)-LOG10(0.6))
+                 
+                 !final extrapolation
+                 HeIRecLines(i) = (x1/0.5**coeff)*T4**coeff
+              end do
+          end if
+       
+       endif
 
-              HeIRecLines(i) = x1+((x2-x1)*(NeUsed-100.**denint)/(100.**(denint+1)-100.**(denint)))
-           end do
-       elseif(denint==0) then
-           do i = 1, 34
-              HeIRecLines(i) = HeIrecLineCoeff(i,1,1)*(T4**(HeIrecLineCoeff(i,1,2)))*exp(HeIrecLineCoeff(i,1,3)/T4)
-           end do
-        elseif(denint==3) then
-           do i = 1, 34
-              HeIRecLines(i) = HeIrecLineCoeff(i,3,1)*(T4**(HeIrecLineCoeff(i,3,2)))*exp(HeIrecLineCoeff(i,3,3)/T4)
-           end do
-        end if
-        HeIRecLines=HeIRecLines*NeUsed*grids(iG)%elemAbun(grids(iG)%abFileIndex(ix,iy,iz),2)*ionDenUsed(elementXref(2),2)
+       HeIRecLines_raw = HeIRecLines ! Save the raw coefficients before scaling
+       HeIRecLines=HeIRecLines*NeUsed*grids(iG)%elemAbun(grids(iG)%abFileIndex(ix,iy,iz),2)*ionDenUsed(elementXref(2),2)
+
+!	! ==========================================================
+!	! START: ADD DIAGNOSTIC PRINTS HERE
+!	! ==========================================================
+!	    BLOCK
+!		! Trigger the print statement only for the problematic cells
+!!		if (DEBUG_THIS_CELL .and. TeUsed > 0.0 .and. TeUsed < 1000.0 .and. grids(iG)%Hden(grids(iG)%active(ix,iy,iz)) > 10000.) then
+!		if (DEBUG_THIS_CELL .and. grids(iG)%Hden(grids(iG)%active(ix,iy,iz)) > 10000.) then
+!		    
+!		    ! Print all the components of the calculation
+!		    print *, '--- DEBUG He I Lines ---'
+!		    print *, 'Cell (ix,iy,iz): ', ix, iy, iz
+!		    print *, 'Te = ', TeUsed, ' K,  Ne = ', NeUsed, ' cm^-3, Hden = ', grids(iG)%Hden(grids(iG)%active(ix,iy,iz)), ' cm^-3'
+!		    print *, 'T4 = ', T4, ' K', HeIrecLineCoeff(I_5876,1,1), T4**(HeIrecLineCoeff(I_5876,1,2)), exp(HeIrecLineCoeff(I_5876,1,3)/T4), x1, x2
+!		    print *, 'He+ Fraction [ionDenUsed(2,2)] = ', ionDenUsed(elementXref(2),2)
+!		    print *, 'Raw 5876A Coeff [HeIRecLines_raw(10)] = ', HeIRecLines_raw(I_5876)
+!		    print *, 'Final 5876A Emissivity = ', HeIRecLines(I_5876)
+!		    print *, '------------------------'
+
+!		end if
+!	    END BLOCK
+!	! ==========================================================
+!	! END OF DIAGNOSTIC BLOCK
+!	! ==========================================================
+
+       
+        
     end subroutine RecLinesEmission
 
 
@@ -1001,7 +1084,10 @@ module emission_mod
         ! triplet states:
         ! calculate effective recombination coefficients to triplet states[e-14 cm^3/s]
         ! Benjamin, SKillman and mits, 1999, ApJ 514, 307
-        T4 = TeUsed*1.e-4
+        
+        ! limit T4 to the data limit used in the paper fits
+        T4 = MAX(5000.,TeUsed)*1.e-4
+        
         alpha2tS = 27.2*(T4**(-0.678))
 
         ! calculate correction for partial sums and normalization constant
