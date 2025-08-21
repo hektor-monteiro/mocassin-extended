@@ -803,24 +803,24 @@ module emission_mod
 
         ! now do HeI
 
-        ! Safeguard: Prevent T4 from being too small for the fitting formula
-        ! this means HeI lines will be wrong in these regions
-        ! this is a temp fix!!!!!!
-        if (TeUsed < 5000.) then
-           T4 = 5000.0 / 10000.
-        endif
+!        ! Safeguard: Prevent T4 from being too small for the fitting formula
+!        ! this means HeI lines will be wrong in these regions
+!        ! this is a temp fix!!!!!!
+!        if (TeUsed < 5000.) then
+!           T4 = 5000.0 / 10000.
+!        endif
 
-        if (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 100.) then
+        if (NeUsed <= 100.) then
            denint=0
-        elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 100. .and. grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 1.e4) then
+        elseif (NeUsed > 100. .and. NeUsed <= 1.e4) then
            denint=1
-        elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 1.e4 .and. grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) <= 1.e6) then
+        elseif (NeUsed > 1.e4 .and. NeUsed <= 1.e6) then
             denint=2
-        elseif (grids(iG)%Ne(grids(iG)%active(ix,iy,iz)) > 1.e6) then
+        elseif (NeUsed > 1.e6) then
            denint=3
         end if
         
-        if (TeUsed > 0.) then
+        if (TeUsed > 5000.) then
 
            ! data from Benjamin, Skillman and Smits ApJ514(1999)307 [e-25 ergs*cm^3/s]
            if (denint>0.and.denint<3) then
