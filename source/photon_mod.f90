@@ -1077,11 +1077,11 @@ module photon_mod
         REAL :: C        ! Normalization constant for g(x)
         REAL :: G_alpha     ! Value of the CDF at the boundary x=20
 
-!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!        ! original basic probability
-!        call random_number(random)
-!        passProb = -log(1.-random)
-!        weightFactor = 1.0
+        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        ! original basic probability
+        call random_number(random)
+        passProb = -log(1.-random)
+        weightFactor = 1.0
 
 !        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !        ! Probability considering path stretching with fixed alpha
@@ -1090,24 +1090,24 @@ module photon_mod
 !        passProb = -log(1.-random)/alpha
 !        weightFactor = 1.0/(alpha*exp((1-alpha)*passProb))
 
-        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        ! Using modified exponential for strech part
-        ! Define a constant for the composite distribution.
-        alpha = 1.0 / (1.0 + tauCell)
-        compXi = 0.5 ! Define the composite scheme parameter.
-        ! Sample the optical depth from the composite distribution.
-        if (random < compXi) then
-           ! Sample from the exponential distribution part
-           call random_number(random)
-           passProb = -log(1.0 - random)
-        else
-          ! Sample from the modified exponential distribution part
-          call random_number(random)
-          passProb = -log(1.0 - random) / alpha
-        endif
-        ! Apply the weight correction based on the composite scheme formula.
-        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
-         
+!        !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!        ! Using modified exponential for strech part
+!        ! Define a constant for the composite distribution.
+!        alpha = 1.0 / (1.0 + tauCell)
+!        compXi = 0.5 ! Define the composite scheme parameter.
+!        ! Sample the optical depth from the composite distribution.
+!        if (random < compXi) then
+!           ! Sample from the exponential distribution part
+!           call random_number(random)
+!           passProb = -log(1.0 - random)
+!        else
+!          ! Sample from the modified exponential distribution part
+!          call random_number(random)
+!          passProb = -log(1.0 - random) / alpha
+!        endif
+!        ! Apply the weight correction based on the composite scheme formula.
+!        weightFactor = 1.0 / (compXi + (1.0-compXi)*(alpha*exp( (1.0-alpha)*passProb )))
+!         
          
 
 
@@ -1546,6 +1546,14 @@ module photon_mod
 
              ! find the volume of this cell
              dV = getVolume(grid(gP), xP,yP,zP)
+             
+             !=============================================================
+             ! force skip for high tau cells
+             if ( i == 1 .and. tauCell > 20.0) then 
+                passProb = tauCell+1.0e-6
+                enPacket%weight = enPacket%weight / weightFactor * exp(-passProb)
+                !print*, tauCell, enPacket%weight
+             endif
 
              ! check if the packet interacts within this cell
              if ((absTau+tauCell > passProb) .and. (grid(gP)%active(xP,yP,zP)>0)) then
