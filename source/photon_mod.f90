@@ -1713,12 +1713,6 @@ module photon_mod
 
                    random = 1.-random
                    
-                   ! force first event to be scattering
-                   if (i ==1 .and. probSca > 0.) then
-                      random = probSca
-                      enPacket%weight = enPacket%weight * probSca
-                   endif
-
                    if (random > probSca) then
                       lgScattered = .false.
                    else if (random <= probSca) then
