@@ -52,7 +52,7 @@ else ifeq ($(CO),gprof)
   FFLAGS += -g -O0
 else
 #  FFLAGS += -O3 -fbacktrace -Wall -fcheck=all -fopt-info -fopt-info-missed -march=native -mtune=native -fomit-frame-pointer -fopenmp
-  FFLAGS += -O3
+  FFLAGS += -O2
 endif
 
 .PHONY: all clean new install uninstall

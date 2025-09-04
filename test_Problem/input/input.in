@@ -14,6 +14,7 @@ LStar 70.
 nuMax 15.
 nuMin 1.001e-6
 Rin 0.
+Rout 8.0e17
 convLimit 0.05
 dustFile  'input/dustmix.dat' 'input/dust_grainsizes.dat' 
 Ndust file "input/test_dust_21x21x21.dat"
