@@ -2791,6 +2791,7 @@ endif
       ! --- Local Variables ---
       integer :: ios, err                        ! I/O and allocation status flags
       integer :: i,j,k,freq, imu, iG, ic, ijk    ! Loop counters
+      integer, dimension(1) :: farIR_ind         ! index of start of far IR region
   
       ! SED arrays:
       !   Luminosity: Raw escaped energy [erg/s]
@@ -2839,6 +2840,7 @@ endif
       totalE=0.
       do iG = 1, nGrids
         do freq=1,nbins
+        
           do i = 1, grid(iG)%nx
             do j = 1, grid(iG)%ny
               do k = 1, grid(iG)%nz
@@ -2890,10 +2892,14 @@ endif
           enddo ! i
         end do ! freq
       end do ! iG
+      
+      ! save index of far IR zone to use later in effective area calculation
+      ! **** WARNING **** have to account for gas only models at some point
+      farIR_ind = minloc(abs(c/(nuArray*fr1Ryd)*1.e4 - 150.0))
   
       ! --- Post-Processing, Unit Conversion, and Output ---
       do freq = 1, nbins
-        lambda = c/(nuArray(freq)*fr1Ryd)
+        lambda = c/(nuArray(freq)*fr1Ryd)*1.e4
   
         ! Apply correction factor if simulation used XYZ symmetry
         if (lgSymmetricXYZ) then
@@ -2925,13 +2931,16 @@ endif
             ! find phi1 and phi2
             phi1 = int(viewPointPhi(imu)/dPhi)*dPhi
             phi2 = phi1+dPhi
-                        
-            SED(freq, imu) = SED(freq, imu)/(3.086*3.086)
+            
+            ! --- check ratio of IR luminosities ---
+            SEDratio = SUM(Luminosity(1:farIR_ind(1), imu))/SUM(Luminosity(1:farIR_ind(1), 0))
+                       
+            SED(freq, imu) = SED(freq, imu)/(3.086*3.086)/(SEDratio*4*PI)
             SED(freq, imu) = 1.e23*SED(freq, imu)/(3.2898e15*widflx(freq))
         end do
   
         ! Write the processed data for this frequency bin to the file
-        write(16,*) nuArray(freq), c/(nuArray(freq)*fr1Ryd)*1.e4, (SED(freq,imu), imu=0,nAngleBins ), sSED(freq,0)
+        write(16,*) nuArray(freq), lambda, (SED(freq,imu), imu=0,nAngleBins ), sSED(freq,0)
       end do
   
       ! --- Optional Equivalent Tau Calculation ---

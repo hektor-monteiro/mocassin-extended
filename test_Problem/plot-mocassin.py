@@ -227,7 +227,9 @@ plt.plot(sed[:,1]*u.micron, bb_flux, '--',label='Blackbody',color='C2',zorder=0)
 plt.plot(sed[:,1]*u.micron,sed[:,2]/ dist**2,'C0',label='avg. all angles',zorder=0,lw=2)
 plt.plot(sed_ori[:,1]*u.micron,sed_ori[:,2]/ dist**2,'C0:',label='Moc. Original',zorder=0,lw=1)
 plt.plot(sed_cde[:,1]*u.micron,sed_cde[:,2]/ dist**2,'C1--',label='Moc. CDE',zorder=1,lw=1)
-plt.plot(sed[:,1],sed[:,3]*(1/dist)**2   ,'C1',label='line of sight SED',zorder=5,lw=2)
+
+plt.plot(sed[:,1],sed[:,3]*(1/dist)**2 / (0.154783085*4*np.pi),'C1',label='line of sight SED',zorder=5,lw=2)
+
 plt.plot(sed[:,1],sed[:,4]*(1/dist)**2   ,'C3',label='CS SED',zorder=5,lw=2)
 
 
