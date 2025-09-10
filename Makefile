@@ -1,6 +1,6 @@
 # standard
-FC = mpif90.mpich
-LD = mpif90.mpich
+FC = mpif90.openmpi
+LD = mpif90.openmpi
 
 #IBM
 #FC = mpxlf90_r
