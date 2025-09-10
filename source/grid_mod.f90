@@ -486,8 +486,8 @@ module grid_mod
     !
     ! Version 1.0 and later: this subroutine now sets up any type of grids
     subroutine fillGrid(grid)
-        use mpi
         implicit none
+        include 'mpif.h'
 
         type(grid_type), dimension(:),intent(inout) :: grid
 
