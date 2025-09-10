@@ -33,8 +33,8 @@ module iteration_mod
        contains
 
        recursive subroutine iterateMC()
-           use mpi
            implicit none
+           include 'mpif.h'
 
            ! local variables
            real, allocatable :: budgetTemp(:,:)      ! temporary dust heating budget array
