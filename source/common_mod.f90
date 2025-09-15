@@ -399,8 +399,8 @@ module common_mod
     integer, allocatable    :: viewPointPtheta(:), viewPointPphi(:)       ! viewing angles
 
     integer            :: nAngleBins=0     ! number of viewing angles for SED
-    integer            :: TotAngleBinsTheta=10 ! total # of theta angle bins for SED
-    integer            :: TotAngleBinsPhi=20 ! total # of phi angle bins for SED
+    integer            :: TotAngleBinsTheta=20 ! total # of theta angle bins for SED
+    integer            :: TotAngleBinsPhi=40 ! total # of phi angle bins for SED
     integer            :: nGrids           ! total number of grids to be used in the simulation
     integer            :: maxIterateMC     ! limit on number of MC iterations
     integer(kind=int64):: maxPhotons       ! limit to packets to be use
