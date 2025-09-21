@@ -3344,6 +3344,13 @@ end function getVolume
             grid(iG)%Ndust = 0.
             grid(iG)%Tdust = 0.
 
+            allocate(grid(iG)%dustAbunIndex(0:grid(iG)%nCells), stat = err)
+            if (err /= 0) then
+               print*, "! grid: can't allocate dustAbunIndex memory"
+               stop
+            end if
+            grid(iG)%dustAbunIndex=0
+
             if (.not.lgGas) then
 
                allocate(grid(iG)%dustPDF(0:grid(iG)%nCells, 1:nbins), stat = err)
@@ -3355,6 +3362,8 @@ end function getVolume
             end if
 
          end if
+         
+         
 
          grid(iG)%opacity = 0.
          grid(iG)%Jste = 0.
