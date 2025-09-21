@@ -2935,12 +2935,17 @@ endif
             ! --- check ratio of IR luminosities ---
             SEDratio = SUM(Luminosity(1:farIR_ind(1), imu))/SUM(Luminosity(1:farIR_ind(1), 0))
                        
+            ! for whole simulated grid
             SED(freq, imu) = SED(freq, imu)/(3.086*3.086)/(SEDratio*4*PI)
             SED(freq, imu) = 1.e23*SED(freq, imu)/(3.2898e15*widflx(freq))
+
+            ! for central source cell
+            sSED(freq, imu) = sSED(freq, imu)/(3.086*3.086)/(SEDratio*4*PI)
+            sSED(freq, imu) = 1.e23*sSED(freq, imu)/(3.2898e15*widflx(freq))
         end do
   
         ! Write the processed data for this frequency bin to the file
-        write(16,*) nuArray(freq), lambda, (SED(freq,imu), imu=0,nAngleBins ), sSED(freq,0)
+        write(16,*) nuArray(freq), lambda, (SED(freq,imu), imu=0,nAngleBins ), (sSED(freq,imu), imu=0,nAngleBins )
       end do
   
       ! --- Optional Equivalent Tau Calculation ---
