@@ -222,7 +222,7 @@ module xSec_mod
 
 
         ! allocate memory for xSecArrayTemp
-        allocate (xSecArrayTemp(1:1000000), stat = err)
+        allocate (xSecArrayTemp(1:2000000), stat = err)
         if (err /= 0) then
             print*, "! initXSecArray: Cannot allocate grid array"
             stop
