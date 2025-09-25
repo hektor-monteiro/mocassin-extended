@@ -1021,6 +1021,12 @@ module xSec_mod
         !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ! Main loop to calculate crosssections for each dust component
         
+        ! INITIALIZE TOTALS HERE, OUTSIDE THE LOOP
+        allocate (CTsca(1:nbins), stat=err)
+        allocate (CTabs(1:nbins), stat=err)
+        CTabs = 0.
+        CTsca = 0.
+
         do icomp = 1, nDustComponents   
 
            open (unit=10, file=dustSpeciesFile(icomp), iostat = ios, status = &
@@ -1094,16 +1100,16 @@ module xSec_mod
                     allocate (Gcos(1:nSpecies,0:nSizes,1:nbins), stat=err)
                     allocate (Csca(1:nSpecies,0:nSizes,1:nbins), stat=err)
                     allocate (Cabs(1:nSpecies,0:nSizes,1:nbins), stat=err)
-                    allocate (CTsca(1:nbins), stat=err)
-                    allocate (CTabs(1:nbins), stat=err)
+!                    allocate (CTsca(1:nbins), stat=err)
+!                    allocate (CTabs(1:nbins), stat=err)
                     if (err/=0) then
                        print*, "! makeDustXsec (1095): error allocation memory for array"
                        stop
                     end if
                  end if                 
                  if (nSpec == 1) then
-                    CTabs = 0.
-                    CTsca = 0.
+                    !CTabs = 0.
+                    !CTsca = 0.
                     Gcos = 0.
                     Cabs = 0.
                     Csca = 0.
@@ -1234,8 +1240,8 @@ module xSec_mod
                  end if
                  
                  if (nSpec == 1) then
-                    CTabs = 0.
-                    CTsca = 0.
+                    !CTabs = 0.
+                    !CTsca = 0.
                     Gcos = 0.
                     Cabs = 0.
                     Csca = 0.
