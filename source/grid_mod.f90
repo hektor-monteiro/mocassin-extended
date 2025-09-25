@@ -1662,9 +1662,9 @@ module grid_mod
                              do ai = 1, nsizes
                                 if (grainRadius(ai) >= componentMinRadius(nsp, nspec) .and. grainRadius(ai) <= componentMaxRadius(nsp, nspec)) then
                                 
-                                   totalSpecMass(nspec) = totalSpecMass(nspec) + &
+                                   totalSpecMass(dustComPoint(nsp)+nspec-1) = totalSpecMass(dustComPoint(nsp)+nspec-1) + &
                                         &(1.3333*Pi*((grainRadius(ai)*1.e-4)**3)*&
-                                        & rho(dustComPoint(nsp)-1+nspec)*grainWeight(ai)*&
+                                        & rho(dustComPoint(nsp)+nspec-1)*grainWeight(ai)*&
                                         & grainAbun(nsp,nspec))*grid%Ndust(grid%active(i,j,k))*dV
                                         
                                 endif

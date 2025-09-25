@@ -818,6 +818,10 @@ end subroutine iterateT
 
           integer, intent(in) :: isp, ai
           integer :: ifreq, ip
+          integer :: global_isp ! <<-- DECLARE GLOBAL INDEX
+
+          ! Calculate the correct global index for the species
+          global_isp = dustComPoint(nspU) + isp - 1
 
           getGrainEmission=0.
 
@@ -848,7 +852,7 @@ end subroutine iterateT
 
              photFlux = photFlux*fourPi
 
-             Qa = XSecArray(dustAbsXsecP(isp,ai)+ifreq-1)/(1.e-8*grainRadius(ai)**2)
+             Qa = XSecArray(dustAbsXsecP(global_isp,ai)+ifreq-1)/(1.e-8*grainRadius(ai)**2)
 
              getGrainEmission = getGrainEmission+Yhat*photFlux*Qa
 
@@ -945,6 +949,7 @@ end subroutine iterateT
           real    :: Qa, photFlux, EY, Yhat,Yn,th
 
           integer :: ns,na,ifreq,thP
+          integer :: global_ns ! DECLARE GLOBAL INDEX
 
           ! calculate the cooling of dust by photoelectric emission
           !  and heating of gas
@@ -953,6 +958,9 @@ end subroutine iterateT
           photoelHeat_d=0.
           photoelHeat_g=0.
           do ns = 1, nSpeciesPart(nspU)
+             ! Calculate the correct global index for the species
+             global_ns = dustComPoint(nspU) + ns - 1
+
              do na = 1, nSizes
              
                 if (grainRadius(na) >= componentMinRadius(nspU, ns) .and. grainRadius(na) <= componentMaxRadius(nspU, ns)) then
@@ -963,14 +971,14 @@ end subroutine iterateT
                       stop
                    end if
 
-                   th = max(grainVn(ns)+grainPot(ns,na), grainVn(ns))
+                   th = max(grainVn(global_ns)+grainPot(ns,na), grainVn(global_ns))
                    call locate(nuArray,th,thP)
                    if(thP<=0) thP=1
 
                    do ifreq = thP, nbins
 
-                      Yn = min(Y0*(1.-grainVn(ns)/nuArray(ifreq)), Y1)
-                      Yhat = Yn*min(1., max(0.,1.-grainPot(ns,na)/(nuArray(ifreq)-grainVn(ns))))
+                      Yn = min(Y0*(1.-grainVn(global_ns)/nuArray(ifreq)), Y1)
+                      Yhat = Yn*min(1., max(0.,1.-grainPot(ns,na)/(nuArray(ifreq)-grainVn(global_ns))))
 
                       if (.not. lgDebug) then
                          photFlux = grid%Jste(cellP,ifreq)/(hcRyd*nuArray(ifreq))
@@ -979,9 +987,9 @@ end subroutine iterateT
                       end if
 
                       photFlux = photFLux
-                      Qa = XSecArray(dustAbsXsecP(ns,na)+ifreq-1)
-                      EY = Yn*0.5* min(nuArray(ifreq)-grainVn(ns),&
-                           & max(0., ((nuArray(ifreq)-grainVn(ns))**2-grainPot(ns,na)**2)/&
+                      Qa = XSecArray(dustAbsXsecP(global_ns,na)+ifreq-1)
+                      EY = Yn*0.5* min(nuArray(ifreq)-grainVn(global_ns),&
+                           & max(0., ((nuArray(ifreq)-grainVn(global_ns))**2-grainPot(ns,na)**2)/&
                            & (nuArray(ifreq)-grainVn(ns))))
 
                       photoelHeat_d(ns,na) = photoelHeat_d(ns,na)+Qa*photFlux*EY*hcRyd/Pi
@@ -1011,6 +1019,7 @@ end subroutine iterateT
           integer :: ss(30)
           real :: vmean, mcp ! colliding particle mean velocity and mean particle mass
           integer :: nelectrons, istage, ns, na
+          integer :: global_ns ! <<-- DECLARE GLOBAL INDEX
 
           ! outer shell array
           ss = (/1,1,2,2,3,3,3,3,3,3,4,4,5,5,5,5,5,5,&
@@ -1048,8 +1057,12 @@ end subroutine iterateT
                       end if
 
                       do ns = 1, nSpeciesPart(nspU)
+                      
+                         ! <<-- CALCULATE THE GLOBAL INDEX
+                         global_ns = dustComPoint(nspU) + ns - 1
+                      
                          if (istage == 1) then
-                            S = 2*mcp*MsurfAtom(ns)/(mcp+MsurfAtom(ns))**2
+                            S = 2*mcp*MsurfAtom(global_ns)/(mcp+MsurfAtom(global_ns))**2
                          else
                             S = 1.
                          end if
@@ -2345,6 +2358,7 @@ end subroutine iterateT
 
             integer :: nS, i, ai ! counters
             integer :: iT        ! pointer to dust temp in dust temp array
+            integer :: global_nS ! pointer index for dust component
 
             ! radiation field at this location
             if (lgDebug) then
@@ -2363,6 +2377,12 @@ end subroutine iterateT
             ! calculate absorption integrals for each species
             do nS = 1, nSpeciesPart(nspU)
 
+               ! CALCULATE THE GLOBAL INDEX
+               global_nS = dustComPoint(nspU) + nS - 1 
+
+               ! Only proceed with calculations if the grain species actually exists in this cell.
+               if (grainAbun(nspU, nS) > 1.e-20) then
+
                do ai = 1, nSizes
 
                   if (grainRadius(ai) >= componentMinRadius(nspU, ns) .and. grainRadius(ai) <= componentMaxRadius(nspU, ns)) then
@@ -2372,9 +2392,9 @@ end subroutine iterateT
                      if (lgTraceHeating.and.taskid==0) dabs=0.
 
                      do i = 1, nbins
-                        dustAbsIntegral = dustAbsIntegral+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
+                        dustAbsIntegral = dustAbsIntegral+xSecArray(dustAbsXsecP(global_nS,ai)+i-1)*radField(i)
                         if (lgTraceHeating.and.taskid==0) then
-                           dabs = dabs+xSecArray(dustAbsXsecP(nS,ai)+i-1)*radField(i)
+                           dabs = dabs+xSecArray(dustAbsXsecP(global_nS,ai)+i-1)*radField(i)
                         end if
                      end do
 
@@ -2405,27 +2425,28 @@ end subroutine iterateT
                         end if
                      end if
 
-                     call locate(dustEmIntegral(nS,ai,:), dustAbsIntegral, iT)
+                     call locate(dustEmIntegral(global_nS,ai,:), dustAbsIntegral, iT)
 
                      if (iT<=0 .and. lgTalk) then
                         print*, "getDustT: [warning] temperature of grain = 0. K!!!!"
                         print*, cellP
                         print*, nS, dustAbsIntegral
-                        print*, dustEmIntegral(nS,ai,1)
+                        print*, dustEmIntegral(global_nS,ai,1)
                         !stop
                         iT=1
                         grid%Tdust(nS,ai,cellP) = 1.
                      else if (iT>=nTemps) then
                         grid%Tdust(nS,ai,cellP) = real(nTemps)
                      else
+                        !if(nspU == 2) print*, nspU,nS,ai,iT, grainAbun(nspU,nS), dustAbsIntegral, xSecArray(dustAbsXsecP(global_nS,ai)+i-1)
                         grid%Tdust(nS,ai,cellP) = real(iT) + &
-                             & (dustAbsIntegral-dustEmIntegral(nS,ai,iT))*&
-                             & (real(iT+1)-real(iT))/(dustEmIntegral(nS,ai,iT+1)-&
-                             & dustEmIntegral(nS,ai,iT))
+                             & (dustAbsIntegral-dustEmIntegral(global_nS,ai,iT))*&
+                             & (real(iT+1)-real(iT))/(dustEmIntegral(global_nS,ai,iT+1)-&
+                             & dustEmIntegral(global_nS,ai,iT))
                      end if
 
                      if (lgTraceHeating.and.taskid==0) then
-                        write(57,*) 'Radiative cooling: ', dustEmIntegral(ns,ai,iT)
+                        write(57,*) 'Radiative cooling: ', dustEmIntegral(global_nS,ai,iT)
                         write(57,*) 'Grain temperature: ', grid%Tdust(nS,ai,cellP), &
                              & " species ", grainLabel(nS), " size:", grainRadius(ai)
 
@@ -2433,7 +2454,7 @@ end subroutine iterateT
 
                      if (lgTalk) &
                           & print*, "! getDustT: [talk] cell ", xP,yP,zP,"; Grain temperature: "&
-                          &, grid%Tdust(nS,ai,cellP), " species ", grainLabel(nS), " size:", grainRadius(ai)
+                          &, grid%Tdust(nS,ai,cellP), " species ", grainLabel(global_nS), " size:", grainRadius(ai)
 
                      ! find weighted mean
                      grid%Tdust(nS,0,cellP) = grid%Tdust(nS,0,cellP)+&
@@ -2445,6 +2466,8 @@ end subroutine iterateT
 
                grid%Tdust(0,0,cellP) = grid%Tdust(0,0,cellP)+&
                     & grid%Tdust(nS,0,cellP)*grainAbun(nspU,nS)
+                    
+               endif ! *** END OF IF for zero grain abundance ***
 
             end do
 
@@ -2465,6 +2488,11 @@ end subroutine iterateT
 
             integer             :: iL      ! line counter
             integer             :: imul    ! multiplet counter
+
+            integer               :: global_speciesP ! DECLARE GLOBAL INDEX
+
+            ! Calculate the correct global index for the species
+            global_speciesP = dustComPoint(icompP) + speciesP - 1
 
             resLineHeating = 0.
             do iL = 1, nResLines
@@ -2512,9 +2540,9 @@ end subroutine iterateT
 
                heat = Gline*grid%Hden(cellP)* &
                     & (1.-grid%fEscapeResPhotons(cellP, iL))*&
-                    & xSecArray(dustAbsXSecP(speciesP,sizeP)+resLine(iL)%nuP-1)/&
+                    & xSecArray(dustAbsXSecP(global_speciesP,sizeP)+resLine(iL)%nuP-1)/&
                     & (grid%Ndust(cellP)*&
-                    & absOpacSpecies(speciesP,resLine(iL)%nuP))
+                    & absOpacSpecies(global_speciesP,resLine(iL)%nuP))
 
                ! Harrington Monk and Clegg 1988 (section 3.2)
                resLineHeating = resLineHeating + heat
