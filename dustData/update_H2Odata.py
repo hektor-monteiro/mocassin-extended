@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 
 # dirty ice from https://ui.adsabs.harvard.edu/abs/1993A%26A...279..577P/abstract
 
-astrosilfile = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/astroSilD2003.nk'
+astrosilfile = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/sil-dlee.nk'
+# astrosilfile = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/astroSilD2003.nk'
 h2ofile = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/h20_crystalline.nk'
 h2ofile08 = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/h20_Warren08.nk'
 dirtyfile = '/home/hmonteiro/Google Drive/work/PN/software/mocassin_HM_2025/dustData/dirty-ice.nk'
