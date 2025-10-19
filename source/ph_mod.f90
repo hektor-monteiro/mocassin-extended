@@ -1501,8 +1501,8 @@ module xSec_mod
 		 ! if size parameter > 100 use 100 (geometrical optics)
 		 if (sizeParam > 100.) sizeParam=100.
 
-		 ! now calculate the efficiencies
-		 !call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
+!		 ! now calculate the efficiencies
+!		 call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
 		 
 		 if (sizeParam < 1) then 
 		    call CDE_efficiency(grainRadius(ai), refIndex, 2.9979250e14/(nuArray(i)*fr1Ryd), Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
@@ -1510,7 +1510,7 @@ module xSec_mod
 		    call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
 		 endif
 		 
-                 ! Qabs here is the Qext returned by BHMie
+                 ! Qabs here is the Qext returned by efficiency functions
 		 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
 
 		 if (.not.lgDustScattering) Qsca(ai,i)=0.
