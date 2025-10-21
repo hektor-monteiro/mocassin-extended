@@ -1513,7 +1513,7 @@ module xSec_mod
                  ! Qabs here is the Qext returned by efficiency functions
 		 Qabs(ai,i) = Qabs(ai,i) - Qsca(ai,i)
 
-		 if (.not.lgDustScattering) Qsca(ai,i)=0.
+		 if (.not.lgDustScattering) Qsca(ai,i)=0. 
 		 
               else ! if grain size is outside the range for the given species set all to 0
               
