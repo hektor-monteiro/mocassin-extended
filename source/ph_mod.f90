@@ -833,6 +833,9 @@ module xSec_mod
         character(len = 15) :: textString, dustFileType
         character(len=50)   :: readChar, extFile ! character string readers
         character(len=50)   :: extinctionFile
+        character(len=256)  :: speciesLine ! one raw record of the grain-species
+                                           ! file, parsed below so the optional
+                                           ! amin/amax columns stay optional
 
         print*, 'in makeDustXSec'
 
@@ -1041,8 +1044,29 @@ module xSec_mod
 
            do nSpec = 1, nSpeciesPart(icomp)
               
-              ! For each species read abundance and size interval to use
-              read(10, *) extinctionFile, grainAbun(icomp, nSpec), componentMinRadius(icomp, nSpec), componentMaxRadius(icomp, nSpec)
+              ! For each species read abundance and, optionally, the size
+              ! interval it occupies.
+              read(10, '(A)', iostat=ios) speciesLine
+              if (ios /= 0) then
+                 print*, "! makeDustXsec: unexpected end of grain-species file &
+                      &while reading species ", nSpec, " of component ", icomp
+                 stop
+              end if
+
+              read(speciesLine, *, iostat=ios) extinctionFile, grainAbun(icomp, nSpec), &
+                   & componentMinRadius(icomp, nSpec), componentMaxRadius(icomp, nSpec)
+
+              if (ios /= 0) then
+                 read(speciesLine, *, iostat=ios) extinctionFile, grainAbun(icomp, nSpec)
+                 if (ios /= 0) then
+                    print*, "! makeDustXsec: cannot parse grain-species record; expected"
+                    print*, "!   <optical-data file> <abundance> [<amin/um> <amax/um>]"
+                    print*, "! got: ", trim(speciesLine)
+                    stop
+                 end if
+                 componentMinRadius(icomp, nSpec) = grainRadius(1)
+                 componentMaxRadius(icomp, nSpec) = grainRadius(nSizes)
+              end if
               
               ! Read dust optical constant data from file
               open (unit=20, file=PREFIX//"/share/mocassin/"//extinctionFile, iostat = ios, &
@@ -1442,9 +1466,15 @@ module xSec_mod
                             & + xSecArrayTemp(dustAbsXsecP(dustComPoint(icomp)-1+nSpec,ai)+i-1)*&
                             & grainWeight(ai)
 
-                       gSca(i) = gSca(i)+gCos(nSpec,ai,i)*Pi*grainRadius(ai)**2*&
+                       ! The mean scattering cosine of a grain mixture is
+                       ! weighted by each grain's scattering cross-section,
+                       ! <g> = sum g C_sca n / sum C_sca n, not by its
+                       ! geometric area pi a^2. Area weighting hands the average
+                       ! to the smallest grains, which scatter weakly and almost
+                       ! isotropically in the UV.
+                       gSca(i) = gSca(i)+gCos(nSpec,ai,i)*Csca(nSpec,ai,i)*&
                             & grainWeight(ai)*grainAbun(icomp, nSpec)
-                       norm(i) = norm(i) + Pi*grainRadius(ai)**2*&
+                       norm(i) = norm(i) + Csca(nSpec,ai,i)*&
                             & grainWeight(ai)*grainAbun(icomp, nSpec)
                             
                     endif
@@ -1454,7 +1484,11 @@ module xSec_mod
            end do
 
            do i = 1, nbins
-              gSca(i)=gSca(i)/norm(i)
+              if (norm(i) > 0.) then
+                 gSca(i)=gSca(i)/norm(i)
+              else
+                 gSca(i)=0.
+              end if
 !              write(6,'(i5,2es12.4)')i,c/(nuArray(i)*fr1Ryd)*1.e4,gSca(i)
            enddo
                       
@@ -1493,7 +1527,7 @@ module xSec_mod
            
            do ai = 1, nSizes
            
-              if (grainRadius(ai) > amin .and. grainRadius(ai) < amax) then
+              if (grainRadius(ai) >= amin .and. grainRadius(ai) <= amax) then
                                
 		 ! size parameter
 		 sizeParam=2.0*3.14159265*grainRadius(ai)/( 2.9979250e14/(nuArray(i)*fr1Ryd) )
@@ -1504,7 +1538,7 @@ module xSec_mod
 !		 ! now calculate the efficiencies
 !		 call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
 		 
-		 if (sizeParam < 1) then 
+		 if (sizeParam < 1 .and. lgCDE) then 
 		    call CDE_efficiency(grainRadius(ai), refIndex, 2.9979250e14/(nuArray(i)*fr1Ryd), Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))
 		 else 
 		    call BHmie(sizeParam,refIndex,Qabs(ai,i),Qsca(ai,i),ggCos(ai,i))

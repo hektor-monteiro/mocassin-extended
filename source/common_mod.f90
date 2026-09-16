@@ -23,7 +23,7 @@ module common_mod
     logical         :: lg2D=.false.             ! 2D?
     logical         :: lgIsotropic
 
-    logical             :: lgMultiStars=.false.
+    logical         :: lgMultiStars=.false.
     logical         :: lgEquivalentTau          ! calculate equivalent tau?
     logical         :: lgWarm=.false.           ! warm started?
     logical         :: lgFluorescence=.false.   ! fluorescence run?
@@ -39,6 +39,7 @@ module common_mod
     logical         :: lgNosource = .false.     ! exclude sources from SED?
     logical         :: lginputDustMass = .false.! user sets input dust mass?
     logical         :: lginputGasMass = .false. ! user sets input gas mass?
+    logical         :: lgCDE = .false.          ! user sets CDE for grain properties?
 
     real, allocatable :: gSca(:)                 ! gSca(freq)
 
@@ -160,9 +161,10 @@ module common_mod
 
 
     ! slit stuff
-    real :: dxSlit = 0.
-    real :: dySlit = 0.
-
+    character(len=1) :: slitAxis = 'N'
+    real :: d1Slit = 0.
+    real :: d2Slit = 0.
+    
     ! photoionization data
     real, dimension(5,30,30) :: CF=0.
     real, dimension(30,30)   :: cionTherm = 0.
