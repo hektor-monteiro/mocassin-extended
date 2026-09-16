@@ -1,4 +1,4 @@
-# mocassin_HM_2026: Monte Carlo Simulations of Ionised Nebulae
+# Mocassin-Extended: Monte Carlo Simulations of Ionised Nebulae
 
 **MOCASSIN** is a fully 3D or 2D photoionisation and dust radiative transfer code which employs a Monte Carlo approach to the transfer of radiation through media of arbitrary geometry and density distribution. It was originally developed by Barbara Ercolano (https://mocassin.nebulousresearch.org/publications) for the modelling of photoionised regions like HII regions and planetary nebulae and has since expanded and been applied to a variety of astrophysical problems, including modelling clumpy dusty supernova envelopes, star forming galaxies, protoplanetary disks and inner shell fluorescence emission in the photospheres of stars and disk atmospheres.
 
@@ -68,37 +68,15 @@ There are also 1D and 2D benchmark models included under `benchmarks/dust/1D` an
 
 See `man/mocassin.1` for a complete list of keywords that can be configured in the `input.in` file.
 
----
+## Licence and credits
 
-## Some Notes on Dust Species
+Mocassin-Extended is distributed under the **GNU General Public License, version 3** ([LICENSE](LICENSE)).
 
-| Grain Species | Type | Size Range (μm) | ρ (g/cm³) | Sublim. Temp (K) | Molecular Formula | Mol. Weight (amu) | ⟨amu/atom⟩ | Work Function (Ry) |
-| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
-| Silicates (amorphous) | Mg/Fe silicates | 0.005–0.25 | 2.5–3.5 | 1200–1500 | Approx. MgFeSiO₄ | ~172 | ~21.5 | ~0.37 (5 eV) |
-| Graphite | Carbonaceous | 0.005–0.25 | 2.2 | ~2000 | C | 12 | 12.0 | 0.33–0.37 (4.5–5 eV) |
-| Olivine | (Mg,Fe)₂SiO₄ | 0.01–1.0 | 3.3–4.4 | 1400–1500 | Mg₂SiO₄ | 140.7 | 23.5 | ~0.37 (5 eV) |
-| Forsterite | Mg₂SiO₄ (pure olivine) | 0.1–1.0 | 3.27 | 1400 | Mg₂SiO₄ | 140.7 | 23.5 | ~0.37 (5 eV) |
-| Quartz | SiO₂ | 0.01–0.5 | 2.65 | 1200–1300 | SiO₂ | 60.08 | 20.0 | ~0.33 (4.5 eV) |
-| Enstatite | MgSiO₃ | 0.1–1.0 | 3.2 | 1350–1400 | MgSiO₃ | 100.4 | 25.1 | ~0.37 (5 eV) |
+- **MOCASSIN** is Copyright (C) 2003-2005 Barbara Ercolano and is licensed under GPL version 2 or any
+  later version. This fork starts from R. Wesson's version ([rwesson/mocassin](https://github.com/rwesson/mocassin)).
+  Files changed here keep their original copyright notice and carry a modification note.
+Work that uses MOCASSIN-PDR should cite:
 
-### References & Sources
+- MOCASSIN: Ercolano et al. 2003, MNRAS 340, 1136; Ercolano, Barlow & Storey 2005, MNRAS 362, 1038;
+  Ercolano et al. 2008, ApJS 175, 534
 
-Here are sources used to compile the physical parameters (need to double check these):
-
-#### Density and Molecular Weights
-- **Draine, B. T. (2003)**, *Annual Review of Astronomy and Astrophysics*, 41, 241  
-- **Henning, T. (2010)**, *ARA&A*, 48, 21  
-- **Lodders, K. (2003)**, *ApJ*, 591, 1220 (solar abundances)  
-- **CRC Handbook of Chemistry and Physics** for molecular weights and densities
-
-#### Sublimation Temperatures
-- **Gail & Sedlmayr (1999)**, *A&A*, 347, 594  
-- **Tielens, A. G. G. M. (2005)**, *The Physics and Chemistry of the Interstellar Medium*  
-- **Duschl et al. (1996)**, *A&A*, 312, 624  
-- Note: Temperatures vary with ambient pressure and gas density.
-
-#### Work Function
-- **Draine & Salpeter (1979)**, *ApJ*, 231, 77 (photoelectric emission from grains)  
-- **Jenkins (2009)**, *ApJ*, 700, 1299 (dust charging)  
-- **CRC Handbook** for graphite and silica values  
-- For silicates, work functions are inferred from electron yield and ionization potentials (~5 eV = 0.37 Ry)
