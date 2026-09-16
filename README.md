@@ -75,7 +75,7 @@ Mocassin-Extended is distributed under the **GNU General Public License, version
 - **MOCASSIN** is Copyright (C) 2003-2005 Barbara Ercolano and is licensed under GPL version 2 or any
   later version. This fork starts from R. Wesson's version ([rwesson/mocassin](https://github.com/rwesson/mocassin)).
   Files changed here keep their original copyright notice and carry a modification note.
-Work that uses MOCASSIN-PDR should cite:
+Work that uses MOCASSIN-EXTENDED should cite:
 
 - MOCASSIN: Ercolano et al. 2003, MNRAS 340, 1136; Ercolano, Barlow & Storey 2005, MNRAS 362, 1038;
   Ercolano et al. 2008, ApJS 175, 534
