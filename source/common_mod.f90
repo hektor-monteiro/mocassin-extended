@@ -534,4 +534,30 @@ module common_mod
 
     type(aldropequidata), dimension(167) :: aldropequi_coeffs
 
+    type badnelldata
+        integer :: nfit
+        real, dimension(9) :: c
+        real, dimension(9) :: e
+    end type badnelldata
+
+    type(badnelldata), dimension(nElements, nElements) :: badnell_dr_coeffs
+    logical :: lgBadnellLoaded = .false.
+
+    type badnell_rr_data
+        real :: a = 0.
+        real :: b = 0.
+        real :: t0 = 0.
+        real :: t1 = 0.
+        real :: c = 0.
+        real :: t2 = 0.
+        logical :: defined = .false.
+    end type badnell_rr_data
+
+    type(badnell_rr_data), dimension(nElements, nElements) :: badnell_rr_coeffs
+    logical :: lgBadnellRRLoaded = .false.
+
+    ! Recombination cooling treatment in thermal balance: Case A (default) vs Case B (legacy)
+    logical :: lgCaseARecCool = .true.
+
+
 end module common_mod

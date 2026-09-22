@@ -1203,11 +1203,22 @@ end subroutine iterateT
             end if
 
             ! cooling of gas due to recombination of H+
-            ! fits to Hummer, MNRAS 268(1994) 109, Table 1.
-            ! least square fitting to m=4
-            betaRec = 9.4255985E-11 -4.04794384E-12*log10Te &
-                 & -1.0055237E-11*log10Te*log10Te +  1.99266862E-12*log10Te*log10Te*log10Te&
-                 & -1.06681387E-13*log10Te*log10Te*log10Te*log10Te
+            if (lgCaseARecCool) then
+               ! Case A recombination cooling: beta_A = beta_B + beta_1
+               ! fits to Hummer, MNRAS 268(1994) 109, Table 1
+               ! least square polynomial fitting to m=4
+               betaRec = 1.25738653E-10 - 2.88316073E-11*log10Te &
+                    & + 3.27948717E-12*log10Te*log10Te &
+                    & - 7.94872006E-13*log10Te*log10Te*log10Te &
+                    & + 7.99438786E-14*log10Te*log10Te*log10Te*log10Te
+            else
+               ! Legacy Case B recombination cooling
+               ! fits to Hummer, MNRAS 268(1994) 109, Table 1.
+               ! least square fitting to m=4
+               betaRec = 9.4255985E-11 - 4.04794384E-12*log10Te &
+                    & - 1.0055237E-11*log10Te*log10Te + 1.99266862E-12*log10Te*log10Te*log10Te &
+                    & - 1.06681387E-13*log10Te*log10Te*log10Te*log10Te
+            end if
 
             coolRec = Np*NeUsed*betaRec*kBoltzmann*TeUsed/sqrt(TeUsed)
 
@@ -1244,12 +1255,19 @@ end subroutine iterateT
 
 
             ! cooling of gas due to recombination of He++
-            ! fits to Hummer, MNRAS 268(1994) 109, Table 1.  least square fitting to m=4
-            ! and scaled to Z=2
-            betaRec = 2.*(9.4255985E-11 -4.04794384E-12*log10TeScaled &
-                 & -1.0055237E-11*log10TeScaled*log10TeScaled  &
-                 & +1.99266862E-12*log10TeScaled*log10TeScaled*log10TeScaled&
-                 & -1.06681387E-13*log10TeScaled*log10TeScaled*log10TeScaled*log10TeScaled)
+            ! fits to Hummer, MNRAS 268(1994) 109, Table 1. least square fitting to m=4
+            ! and scaled to Z=2 (beta(Te, Z) = Z * beta(Te/Z^2, 1))
+            if (lgCaseARecCool) then
+               betaRec = 2.*(1.25738653E-10 - 2.88316073E-11*log10TeScaled &
+                    & + 3.27948717E-12*log10TeScaled*log10TeScaled &
+                    & - 7.94872006E-13*log10TeScaled*log10TeScaled*log10TeScaled &
+                    & + 7.99438786E-14*log10TeScaled*log10TeScaled*log10TeScaled*log10TeScaled)
+            else
+               betaRec = 2.*(9.4255985E-11 - 4.04794384E-12*log10TeScaled &
+                    & - 1.0055237E-11*log10TeScaled*log10TeScaled &
+                    & + 1.99266862E-12*log10TeScaled*log10TeScaled*log10TeScaled &
+                    & - 1.06681387E-13*log10TeScaled*log10TeScaled*log10TeScaled*log10TeScaled)
+            end if
 
             coolRec = coolRec + Np*NeUsed*betaRec*kBoltzmann*TeUsed/sqrt(TeUsed/4.)
 
@@ -1274,11 +1292,28 @@ end subroutine iterateT
 
 
             ! cooling of gas due to recombination of He+
-            ! fits to Hummer and Storey, MNRAS 297(1998) 1073, Table 6. least square fitting to m=4
-            betaRec =    9.4255985E-11 -4.04794384E-12*log10Te &
-                 & -1.0055237E-11*log10Te*log10Te  &
-                 & +1.99266862E-12*log10Te*log10Te*log10Te &
-                 & -1.06681387E-13*log10Te*log10Te*log10Te*log10Te
+            if (lgCaseARecCool) then
+               ! Case A recombination cooling: fits to Hummer & Storey, MNRAS 297(1998) 1073, Table 6
+               ! (beta_A = beta_B + beta_1) for log10Te <= 4.4, joined to Hummer (1994) Case A for higher T
+               if (log10Te <= 4.4) then
+                  betaRec = 1.22981534E-10 - 2.49951255E-11*log10Te &
+                       & + 1.80059252E-12*log10Te*log10Te &
+                       & - 7.31249870E-13*log10Te*log10Te*log10Te &
+                       & + 1.20240231E-13*log10Te*log10Te*log10Te*log10Te
+               else
+                  betaRec = 1.25738653E-10 - 2.88316073E-11*log10Te &
+                       & + 3.27948717E-12*log10Te*log10Te &
+                       & - 7.94872006E-13*log10Te*log10Te*log10Te &
+                       & + 7.99438786E-14*log10Te*log10Te*log10Te*log10Te
+               end if
+            else
+               ! Legacy Case B recombination cooling
+               ! fits to Hummer and Storey, MNRAS 297(1998) 1073, Table 6. least square fitting to m=4
+               betaRec =    9.4255985E-11 - 4.04794384E-12*log10Te &
+                    & - 1.0055237E-11*log10Te*log10Te &
+                    & + 1.99266862E-12*log10Te*log10Te*log10Te &
+                    & - 1.06681387E-13*log10Te*log10Te*log10Te*log10Te
+            end if
 
             coolRec = coolRec + Np*NeUsed*betaRec*kBoltzmann*TeUsed/sqrt(TeUsed)
 
@@ -2166,9 +2201,12 @@ end subroutine iterateT
             call dielectronic(diRec)
 
             ! calculate dielectronic recombination part
-            do elem = 3, nElements
+            do elem = 2, nElements
+                if (.not. lgBadnellLoaded .and. elem == 2) cycle
                 do ion = 1, min(nstages-1, elem)
-                   if (diRec(elem,ion) == 0.) diRec(elem,ion) = diRec(8,ion)
+                   if (.not. lgBadnellLoaded) then
+                      if (elem >= 3 .and. diRec(elem,ion) == 0.) diRec(elem,ion) = diRec(8,ion)
+                   end if
                    if (diRec(elem,ion) < 0.) diRec(elem,ion) = 0.
                    alphaTot(elem, ion) = alphaTot(elem, ion) + diRec(elem, ion)
                    if (alphaTot(elem,ion) < 0.) alphaTot(elem,ion) = 0.                    
@@ -2217,12 +2255,45 @@ end subroutine iterateT
                                                             ! first time this is evaluated?
 
             real                                 :: tt      ! temp dep fact in interpolation
+            real                                 :: d_rr, f_rr, b_prime ! Badnell RR evaluation variables
 
             real, dimension(2, nElements, nElements),&      ! coefficients for the
                  & save  :: rrec    ! calculation of the
             real, dimension(4, nElements, nElements),&      ! radiative rates
                  & save  :: rnew    !
             real, dimension(3, 4:13), save         :: fe    !
+
+            if (TeUsed <= 0.) then
+                radRecFit = 0.
+                return
+            end if
+
+            ! check right element and number of electron reference
+            if ( (z<1) .or. (z>30) ) then
+                print*, "! radRecFit: insane atomic number", z
+                stop
+            end if
+            if ( (n<1) .or. (n>z) ) then
+                print*, "! radRecFit: insane number of electrons", n
+                stop
+            end if
+
+            ! Modern Badnell radiative recombination fits (Cloudy c25.00)
+            if (lgBadnellRRLoaded) then
+               ion = z - n + 1
+               if (ion >= 1 .and. ion <= z) then
+                  if (badnell_rr_coeffs(z, ion)%defined) then
+                     d_rr = sqrt(TeUsed / badnell_rr_coeffs(z, ion)%t0)
+                     f_rr = sqrt(TeUsed / badnell_rr_coeffs(z, ion)%t1)
+                     b_prime = badnell_rr_coeffs(z, ion)%b
+                     if (badnell_rr_coeffs(z, ion)%c /= 0. .and. badnell_rr_coeffs(z, ion)%t2 > 0.) then
+                        b_prime = b_prime + badnell_rr_coeffs(z, ion)%c * exp(-badnell_rr_coeffs(z, ion)%t2 / TeUsed)
+                     end if
+                     radRecFit = badnell_rr_coeffs(z, ion)%a / (d_rr * (1. + d_rr)**(1. - b_prime) * (1. + f_rr)**(1. + b_prime))
+                     return
+                  end if
+               end if
+            end if
 
             ! if this is the first time this procedure is called
             ! read in radiative recombination coefficient file
@@ -2277,16 +2348,6 @@ end subroutine iterateT
                 lgFirst = .false.
             end if
 
-            ! check right element and number of electron reference
-            if ( (z<1) .or. (z>30) ) then
-                print*, "! radRecFit: insane atomic number", z
-                stop
-            end if
-            if ( (n<1) .or. (n>z) ) then
-                print*, "! radRecFit: insane number of electrons", n
-                stop
-            end if
-
             ! calculate the rates
             if ( (n<=3) .or. (n==11) .or. ((z>5) .and. (z<9)) .or. (z==10) .or.&
                  &((z==26) .and. (n>11)) ) then
@@ -2312,34 +2373,48 @@ end subroutine iterateT
 
             ! local variables
 
-            integer                             :: ion
+            integer                             :: elem, ion, k, i
             real                                :: t         ! t = TeUsed/10000., t0,t1 are fitting par
-            real                                :: alpha
+            real                                :: alpha, t32
             real, dimension(nElements, nstages) :: aldroPequi! high T dielec rec coeff by A&P73
 
+            diRec = 0.
             aldroPequi = 0.
 
-            t = TeUsed/10000.
+            if (TeUsed <= 0.) return
 
-            alpha = 0.
-            aldroPequi=0.
+            if (lgBadnellLoaded) then
+               t32 = TeUsed**(-1.5)
+               do elem = 2, nElements
+                  do ion = 1, min(nstages-1, elem)
+                     if (badnell_dr_coeffs(elem, ion)%nfit > 0) then
+                        alpha = 0.
+                        do k = 1, badnell_dr_coeffs(elem, ion)%nfit
+                           alpha = alpha + badnell_dr_coeffs(elem, ion)%c(k) * exp(-badnell_dr_coeffs(elem, ion)%e(k) / TeUsed)
+                        end do
+                        diRec(elem, ion) = alpha * t32
+                     end if
+                  end do
+               end do
+            else
+               t = TeUsed/10000.
+               do i = 1, size(direc_coeffs)
+                  ion = direc_coeffs(i)%elem + 1 - direc_coeffs(i)%n
 
-            do i = 1, size(direc_coeffs)
-               ion = direc_coeffs(i)%elem + 1 - direc_coeffs(i)%n
+                  if (ion <= nstages) then
 
-               if (ion <= nstages) then
-
-        	  if (ion == 1) then
-                     diRec(direc_coeffs(i)%elem, ion) = 0.
-                  else if (direc_coeffs(i)%g == 0) then
-                     diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
-                  else if (direc_coeffs(i)%g == 1 .and. TeUsed .lt. 20000.) then
-                     diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
-                  else if (direc_coeffs(i)%g == 2 .and. TeUsed .ge. 20000.) then
-                     diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
+                     if (ion == 1) then
+                        diRec(direc_coeffs(i)%elem, ion) = 0.
+                     else if (direc_coeffs(i)%g == 0) then
+                        diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
+                     else if (direc_coeffs(i)%g == 1 .and. TeUsed .lt. 20000.) then
+                        diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
+                     else if (direc_coeffs(i)%g == 2 .and. TeUsed .ge. 20000.) then
+                        diRec(direc_coeffs(i)%elem, ion) = (10.**(-12))*(direc_coeffs(i)%a/t+direc_coeffs(i)%b+direc_coeffs(i)%c*t+direc_coeffs(i)%d*t**2)*t**(-3./2.)*exp(-direc_coeffs(i)%f/t)
+                     end if
                   end if
-               end if
-            end do
+               end do
+            end if
 
             ! calculate the high temperatures dielectronic recombination coeficients of
             ! Aldrovandi and Pequignot 1973
@@ -2351,12 +2426,19 @@ end subroutine iterateT
                if (ion <= nstages) aldroPequi(aldropequi_coeffs(i)%elem, ion) = alpha
             end do
 
-            if (TeUsed>60000.) then
-               diRec = aldroPequi
-            else
-               where (direc .eq. 0.)
-                 diRec = aldroPequi
+            if (lgBadnellLoaded) then
+               ! For Badnell dataset, fall back to Aldrovandi & Pequignot only for missing ions
+               where (diRec == 0. .and. aldroPequi > 0.)
+                  diRec = aldroPequi
                endwhere
+            else
+               if (TeUsed>60000.) then
+                  diRec = aldroPequi
+               else
+                  where (direc .eq. 0.)
+                    diRec = aldroPequi
+                  endwhere
+               end if
             end if
 
           end subroutine dielectronic
